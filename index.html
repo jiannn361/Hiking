@@ -5,20 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>輕量化登山地圖</title>
     
-    <!-- 引入 Tailwind CSS 進行介面排版 -->
+    <!-- 引入 Tailwind CSS (建議加上 defer 或放在 body 底部) -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 引入 MapLibre GL JS (支援 3D 地形) -->
-    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
-    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <!-- 引入 MapLibre GL JS (升級至 v4 以解決 Sandbox 環境的 SecurityError) -->
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
     
-    <!-- 引入 JSZip 用於在本地解壓縮 KMZ 檔案 -->
+    <!-- 引入 JSZip (移除 defer) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
-    <!-- 引入 Chart.js 用於繪製高度表 -->
+    <!-- 引入 Chart.js (移除 defer) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- 引入 Lucide Icons (更換為更穩定的 jsDelivr CDN) -->
+    <!-- 引入 Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
 
     <style>
@@ -66,7 +66,7 @@
             100% { transform: scale(1.2, 1.2); opacity: 0; }
         }
 
-        /* 自訂地標的樣式 (搭配選擇的顏色與圖示) */
+        /* 自訂地標的樣式 */
         .custom-poi-marker {
             width: 28px;
             height: 28px;
@@ -121,10 +121,10 @@
         </div>
     </div>
 
-    <!-- 統一的右側工具列 (單一 Flex 容器，解決重疊問題) -->
+    <!-- 右側工具列 -->
     <div class="ui-layer absolute top-28 right-4 flex flex-col gap-2.5 pointer-events-none items-end max-h-[60vh] overflow-y-auto hide-scrollbar pb-4">
         
-        <!-- 縮放與 3D 區塊 -->
+        <!-- 縮放區塊 -->
         <div class="flex flex-col gap-1 bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-1 border border-white/60 shadow-md pointer-events-auto">
             <button onclick="map.zoomIn()" class="p-2 hover:bg-white rounded-full transition text-[#4a503d]">
                 <i data-lucide="plus" class="w-5 h-5"></i>
@@ -133,34 +133,24 @@
             <button onclick="map.zoomOut()" class="p-2 hover:bg-white rounded-full transition text-[#4a503d]">
                 <i data-lucide="minus" class="w-5 h-5"></i>
             </button>
-            <div class="w-full h-px bg-white/50 my-0.5"></div>
-            <!-- 3D 按鈕移到這裡 -->
-            <button id="btn-3d" onclick="toggle3D()" class="p-2 hover:bg-white rounded-full transition text-[#4a503d] flex flex-col items-center">
-                <i data-lucide="box" class="w-5 h-5"></i>
-                <span class="text-[8px] font-bold mt-0.5">3D</span>
-            </button>
         </div>
 
-        <!-- 獨立工具按鈕 -->
         <button id="btn-layer" onclick="toggleMapStyle()" class="bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-2.5 hover:bg-white active:scale-95 transition text-[#4a503d] pointer-events-auto border border-white/60 shadow-md flex flex-col items-center mt-1">
             <i data-lucide="layers" class="w-5 h-5"></i>
             <span id="layer-name" class="text-[8px] font-bold mt-0.5">地形</span>
         </button>
 
         <div id="editor-controls-right" class="flex flex-col gap-2.5 pointer-events-none mt-1">
-            <!-- 專案管理 -->
             <button onclick="openProjectModal()" class="bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-3 hover:bg-white transition text-[#4a503d] pointer-events-auto border border-white/60 shadow-md flex flex-col items-center" title="專案管理">
                 <i data-lucide="folder" class="w-5 h-5"></i>
                 <span class="text-[8px] font-bold mt-0.5">專案</span>
             </button>
             
-            <!-- 載入路線 -->
             <label for="gpx-upload" class="bg-[#f0ece1]/90 backdrop-blur-md border border-white/60 shadow-md rounded-full p-3.5 hover:bg-white cursor-pointer transition text-[#4a503d] pointer-events-auto flex flex-col items-center" title="匯入路線">
                 <i data-lucide="download" class="w-5 h-5"></i>
             </label>
             <input type="file" id="gpx-upload" accept=".gpx,.kml,.kmz">
 
-            <!-- 新增點位 -->
             <button id="btn-add-point" onclick="toggleAddPointMode()" class="bg-[#f0ece1]/90 backdrop-blur-md border border-white/60 shadow-md rounded-full p-3.5 hover:bg-white transition text-[#4a503d] pointer-events-auto flex flex-col items-center" title="新增地標">
                 <i data-lucide="map-pin" class="w-5 h-5"></i>
             </button>
@@ -229,7 +219,7 @@
             </div>
             
             <div id="project-list" class="flex flex-col gap-3 overflow-y-auto hide-scrollbar">
-                <!-- 專案列表將由 JS 動態生成 -->
+                <!-- 專案列表 -->
             </div>
 
             <button onclick="createNewProject()" class="mt-2 w-full bg-[#5c7042] text-white rounded-xl py-3 font-bold hover:bg-[#4a5a35] transition shadow flex justify-center items-center gap-2">
@@ -243,11 +233,18 @@
         const urlParams = new URLSearchParams(window.location.search);
         const isViewOnly = urlParams.get('view') === '1';
         
-        // 資料結構: { "proj_id": { id, name, routePoints: [], markers: [] } }
-        let projects = JSON.parse(localStorage.getItem('hiking_app_projects')) || {};
-        let currentProjectId = localStorage.getItem('hiking_app_current_id');
+        let projects = {};
+        let currentProjectId = null;
 
-        // 初始化預設專案
+        // 優化：處理 LocalStorage 可能爆滿的例外狀況
+        try {
+            projects = JSON.parse(localStorage.getItem('hiking_app_projects')) || {};
+            currentProjectId = localStorage.getItem('hiking_app_current_id');
+        } catch (e) {
+            console.error("無法讀取 LocalStorage", e);
+            projects = {};
+        }
+
         if (Object.keys(projects).length === 0) {
             currentProjectId = 'proj_' + Date.now();
             projects[currentProjectId] = { id: currentProjectId, name: '預設專案', routePoints: [], markers: [] };
@@ -261,86 +258,66 @@
             localStorage.setItem('hiking_app_current_id', currentProjectId);
         }
 
-        // --- 1. MapLibre 地圖初始化 ---
+        // --- 1. MapLibre 地圖初始化 (使用免 API Key 的高品質開源/公部門圖資) ---
         const map = new maplibregl.Map({
             container: 'map',
             style: {
                 version: 8,
                 sources: {
-                    // Google 地形圖 (加入 scale=2 啟用 Retina 高畫質，畫質極度清晰)
-                    'google-terrain': {
-                        type: 'raster',
-                        tiles: ['https://mt1.google.com/vt/lyrs=p&hl=zh-TW&x={x}&y={y}&z={z}&scale=2'],
-                        tileSize: 512,
-                        attribution: '&copy; Google'
+                    // 1. OpenTopoMap (全球開源地形圖，具備等高線，非常適合登山)
+                    'open-topo': { 
+                        type: 'raster', 
+                        tiles: ['https://a.tile.opentopomap.org/{z}/{x}/{y}.png'], 
+                        tileSize: 256, 
+                        attribution: '&copy; OpenStreetMap, SRTM | &copy; OpenTopoMap' 
                     },
-                    // Google 標準地圖 (高畫質 HD 版)
-                    'google-standard': {
-                        type: 'raster',
-                        tiles: ['https://mt1.google.com/vt/lyrs=m&hl=zh-TW&x={x}&y={y}&z={z}&scale=2'],
-                        tileSize: 512
+                    // 2. 內政部國土測繪中心 (台灣通用電子地圖，台灣道路/步道最精準)
+                    'tw-nlsc': { 
+                        type: 'raster', 
+                        tiles: ['https://wmts.nlsc.gov.tw/wmts/EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}'], 
+                        tileSize: 256, 
+                        attribution: '&copy; 內政部國土測繪中心' 
                     },
-                    // Google 衛星空照圖 (高畫質 HD 版)
-                    'google-satellite': {
-                        type: 'raster',
-                        tiles: ['https://mt1.google.com/vt/lyrs=y&hl=zh-TW&x={x}&y={y}&z={z}&scale=2'],
-                        tileSize: 512
-                    },
-                    'terrain-dem': {
-                        type: 'raster-dem',
-                        tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
-                        encoding: 'terrarium',
-                        maxzoom: 14
+                    // 3. Google 衛星空照圖 (高解析度，替換 Esri 衛星圖)
+                    'google-satellite': { 
+                        type: 'raster', 
+                        tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'], 
+                        tileSize: 256, 
+                        attribution: '&copy; Google' 
                     }
                 },
                 layers: [
-                    { id: 'google-terrain-layer', type: 'raster', source: 'google-terrain', minzoom: 0, maxzoom: 22, layout: { visibility: 'visible' } },
-                    { id: 'google-standard-layer', type: 'raster', source: 'google-standard', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } },
-                    { id: 'google-satellite-layer', type: 'raster', source: 'google-satellite', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } }
+                    { id: 'topo-layer', type: 'raster', source: 'open-topo', minzoom: 0, maxzoom: 17, layout: { visibility: 'visible' } },
+                    { id: 'standard-layer', type: 'raster', source: 'tw-nlsc', minzoom: 0, maxzoom: 20, layout: { visibility: 'none' } },
+                    { id: 'satellite-layer', type: 'raster', source: 'google-satellite', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } }
                 ]
             },
             center: [120.6015, 23.5937],
             zoom: 13,
-            pitch: 0,
-            attributionControl: false
+            attributionControl: true // 啟用版權標示，尊重開源圖資規範
         });
 
-        // --- 圖層與 3D 切換 ---
-        let currentMapStyle = 'terrain';
-        const styles = ['terrain', 'standard', 'satellite'];
-        const styleNames = { terrain: '地形', standard: '標準', satellite: '衛星' };
+        // --- 圖層切換 ---
+        let currentMapStyle = 'topo';
+        const styles = ['topo', 'standard', 'satellite'];
+        const styleNames = { topo: '地形', standard: '台灣標準', satellite: '衛星' };
 
         function toggleMapStyle() {
             let idx = (styles.indexOf(currentMapStyle) + 1) % styles.length;
             currentMapStyle = styles[idx];
-            map.setLayoutProperty('google-terrain-layer', 'visibility', currentMapStyle === 'terrain' ? 'visible' : 'none');
-            map.setLayoutProperty('google-standard-layer', 'visibility', currentMapStyle === 'standard' ? 'visible' : 'none');
-            map.setLayoutProperty('google-satellite-layer', 'visibility', currentMapStyle === 'satellite' ? 'visible' : 'none');
+            map.setLayoutProperty('topo-layer', 'visibility', currentMapStyle === 'topo' ? 'visible' : 'none');
+            map.setLayoutProperty('standard-layer', 'visibility', currentMapStyle === 'standard' ? 'visible' : 'none');
+            map.setLayoutProperty('satellite-layer', 'visibility', currentMapStyle === 'satellite' ? 'visible' : 'none');
             document.getElementById('layer-name').textContent = styleNames[currentMapStyle];
-        }
-
-        let is3D = false;
-        function toggle3D() {
-            is3D = !is3D;
-            const btn = document.getElementById('btn-3d');
-            if (is3D) {
-                map.setTerrain({ 'source': 'terrain-dem', 'exaggeration': 1.5 });
-                map.easeTo({ pitch: 70, bearing: 15, duration: 1500 });
-                btn.classList.add('bg-white');
-            } else {
-                map.setTerrain(null);
-                map.easeTo({ pitch: 0, bearing: 0, duration: 1500 });
-                btn.classList.remove('bg-white');
-            }
         }
 
         // --- 全域變數 ---
         let routeMarkers = []; // 管理當前顯示的地標
         let tempPopup = null; // 正在新增地標的氣泡
 
-        // --- 2. Chart.js 高度表 ---
+        // --- Chart.js 高度表初始化 ---
         const ctx = document.getElementById('elevationChart').getContext('2d');
-        const eleChart = new Chart(ctx, {
+        let eleChart = new Chart(ctx, {
             type: 'line',
             data: {
                 datasets: [
@@ -366,41 +343,36 @@
             chartVisible = !chartVisible;
         }
 
-        // --- 3. 專案載入與渲染核心 ---
+        // --- 專案載入 ---
         map.on('load', () => {
-            loadProject(currentProjectId); // 地圖載入完畢後，載入當前專案
+            loadProject(currentProjectId);
         });
 
         function clearCurrentRoute() {
             routeMarkers.forEach(m => m.remove());
             routeMarkers = [];
-            eleChart.data.datasets[0].data = [];
-            eleChart.data.datasets[1].data = [];
-            eleChart.update();
+            if(eleChart) {
+                eleChart.data.datasets[0].data = [];
+                eleChart.data.datasets[1].data = [];
+                eleChart.update();
+            }
             if (map.getSource('route')) {
                 map.getSource('route').setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } });
             }
         }
 
-        // 更新左側統計數據 UI 的函式
-        function updateStatsUI(routePoints) {
+        function updateStatsUI(routePoints, originAsc, originDesc) {
             if (!routePoints || routePoints.length === 0) {
                 document.getElementById('stat-dist').textContent = '--';
                 document.getElementById('stat-asc').textContent = '--';
                 document.getElementById('stat-desc').textContent = '--';
                 return;
             }
-            let asc = 0; let desc = 0;
-            for (let i = 1; i < routePoints.length; i++) {
-                const diff = routePoints[i].ele - routePoints[i-1].ele;
-                if (diff > 0) asc += diff;
-                else if (diff < 0) desc += Math.abs(diff);
-            }
             const dist = routePoints[routePoints.length - 1].dist;
-            
             document.getElementById('stat-dist').textContent = dist.toFixed(2);
-            document.getElementById('stat-asc').textContent = Math.round(asc);
-            document.getElementById('stat-desc').textContent = Math.round(desc);
+            // 優化：直接使用計算好的原始爬升下降，避免降採樣後數據失真
+            document.getElementById('stat-asc').textContent = Math.round(originAsc || 0);
+            document.getElementById('stat-desc').textContent = Math.round(originDesc || 0);
         }
 
         function loadProject(id) {
@@ -411,7 +383,6 @@
             document.getElementById('route-title').textContent = proj.name;
             clearCurrentRoute();
 
-            // 渲染路線
             if (proj.routePoints && proj.routePoints.length > 0) {
                 const coords = proj.routePoints.map(p => [p.lng, p.lat]);
                 const geojson = { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } };
@@ -419,29 +390,28 @@
                 if (map.getSource('route')) map.getSource('route').setData(geojson);
                 else {
                     map.addSource('route', { type: 'geojson', data: geojson });
-                    // 將路線改為亮眼的橘黃色 (#f59e0b)
                     map.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#f59e0b', 'line-width': 6, 'line-opacity': 0.9 } });
                 }
                 
                 const bounds = coords.reduce((b, coord) => b.extend(coord), new maplibregl.LngLatBounds(coords[0], coords[0]));
                 map.fitBounds(bounds, { padding: 50 });
 
-                eleChart.data.datasets[0].data = proj.routePoints.map(p => ({ x: p.dist, y: p.ele }));
-                eleChart.update();
+                if(eleChart) {
+                    eleChart.data.datasets[0].data = proj.routePoints.map(p => ({ x: p.dist, y: p.ele }));
+                    eleChart.update();
+                }
                 
-                updateStatsUI(proj.routePoints); // 計算並顯示數據
+                updateStatsUI(proj.routePoints, proj.totalAsc, proj.totalDesc);
                 
                 document.getElementById('chart-panel').classList.remove('translate-y-[150%]', 'opacity-0');
                 chartVisible = true;
             }
 
-            // 渲染儲存的地標
             if (proj.markers) {
                 proj.markers.forEach(mData => renderMarker(mData));
             }
         }
 
-        // 建立地標表單 (供新增與編輯共用)
         function buildMarkerEditorForm(mData, onSave, onCancel) {
             const div = document.createElement('div');
             div.className = "flex flex-col gap-2 min-w-[220px] p-1";
@@ -514,7 +484,6 @@
             
             setTimeout(() => lucide.createIcons({ root: el }), 0);
 
-            // 設定可拖曳 (只要不是純檢視模式即可拖曳)
             const marker = new maplibregl.Marker({ element: el, draggable: !isViewOnly })
                 .setLngLat([mData.lng, mData.lat])
                 .addTo(map);
@@ -556,7 +525,7 @@
                             projects[currentProjectId].markers[index] = updatedData;
                             saveToLocal();
                             marker.remove();
-                            renderMarker(updatedData); // 重新渲染更新
+                            renderMarker(updatedData);
                         }
                     }, 
                     () => popup.setDOMContent(showViewMode())
@@ -565,30 +534,114 @@
 
             popup.setDOMContent(showViewMode());
             marker.setPopup(popup);
-        // 解析 KML 字串 (強化容錯率)
+
+            if (!isViewOnly) {
+                marker.on('dragend', () => {
+                    const lngLat = marker.getLngLat();
+                    mData.lat = lngLat.lat;
+                    mData.lng = lngLat.lng;
+                    const index = projects[currentProjectId].markers.findIndex(m => m.id === mData.id);
+                    if (index !== -1) projects[currentProjectId].markers[index] = mData;
+                    saveToLocal();
+                });
+            }
+
+            routeMarkers.push(marker);
+        }
+
+        // --- GPX/KML 解析 ---
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; const dLat = (lat2-lat1)*Math.PI/180; const dLon = (lon2-lon1)*Math.PI/180;
+            const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        // 優化：降採樣演算法，防止 LocalStorage 容量爆滿 & 圖表卡頓
+        function thinRouteData(points, maxPoints = 800) {
+            if (points.length <= maxPoints) return points;
+            const step = Math.max(1, Math.floor(points.length / maxPoints));
+            return points.filter((_, index) => index % step === 0 || index === points.length - 1);
+        }
+
+        function saveImportedData(parsedPts, routeName) {
+            let totalDist = 0; let lastPoint = null;
+            let asc = 0; let desc = 0;
+            
+            // 先計算原始的精確爬升與距離
+            const routeData = parsedPts.map(pt => {
+                if (lastPoint) {
+                    totalDist += getDistance(lastPoint.lat, lastPoint.lng, pt.lat, pt.lng);
+                    const diff = pt.ele - lastPoint.ele;
+                    if (diff > 0) asc += diff;
+                    else if (diff < 0) desc += Math.abs(diff);
+                }
+                lastPoint = pt;
+                return { lat: pt.lat, lng: pt.lng, ele: pt.ele, dist: totalDist };
+            });
+
+            // 對資料進行降採樣以利儲存與渲染
+            const thinnedData = thinRouteData(routeData);
+
+            projects[currentProjectId].routePoints = thinnedData;
+            projects[currentProjectId].totalAsc = asc;   // 儲存原始精確爬升
+            projects[currentProjectId].totalDesc = desc; // 儲存原始精確下降
+
+            if (routeName && projects[currentProjectId].name === '預設專案') {
+                projects[currentProjectId].name = routeName;
+            }
+            saveToLocal();
+            loadProject(currentProjectId);
+        }
+
+        function parseGPXText(gpxData) {
+            const xmlDoc = new DOMParser().parseFromString(gpxData, "text/xml");
+            const pts = Array.from(xmlDoc.getElementsByTagName("trkpt"));
+            if (pts.length === 0) pts.push(...Array.from(xmlDoc.getElementsByTagName("rtept")));
+
+            const parsedPts = pts.map(pt => ({
+                lat: parseFloat(pt.getAttribute("lat")),
+                lng: parseFloat(pt.getAttribute("lon")),
+                ele: pt.getElementsByTagName("ele")[0] ? parseFloat(pt.getElementsByTagName("ele")[0].textContent) : 0
+            }));
+            const nameNode = xmlDoc.getElementsByTagName("name")[0];
+            if (parsedPts.length > 0) saveImportedData(parsedPts, nameNode ? nameNode.textContent : "匯入的 GPX");
+            else alert('無效的軌跡檔案');
+        }
+
         function parseKMLText(kmlText) {
             try {
                 const xmlDoc = new DOMParser().parseFromString(kmlText, "text/xml");
                 if (xmlDoc.getElementsByTagName("parsererror").length > 0) throw new Error("XML 解析錯誤");
 
-                const lineStrings = xmlDoc.getElementsByTagName("LineString");
+                let lineStrings = xmlDoc.getElementsByTagName("LineString");
+                // 優化：處理部分 Garmin/Google Earth 匯出的 gx:Track 格式
+                if (lineStrings.length === 0) lineStrings = xmlDoc.getElementsByTagName("gx:Track");
+                
                 const parsedPts = [];
 
                 for (let i = 0; i < lineStrings.length; i++) {
                     const coordNode = lineStrings[i].getElementsByTagName("coordinates")[0];
-                    if (!coordNode) continue;
-                    
-                    // 以空白字元分割，確保不會被換行符號干擾
-                    const coordsArray = coordNode.textContent.trim().split(/\s+/);
-                    coordsArray.forEach(pair => {
-                        const coords = pair.split(',');
-                        if (coords.length >= 2) {
-                            const lng = parseFloat(coords[0]);
-                            const lat = parseFloat(coords[1]);
-                            const ele = coords.length >= 3 ? parseFloat(coords[2]) : 0;
-                            if (!isNaN(lat) && !isNaN(lng)) parsedPts.push({ lng, lat, ele });
-                        }
-                    });
+                    if (coordNode) {
+                        const coordsArray = coordNode.textContent.trim().split(/\s+/);
+                        coordsArray.forEach(pair => {
+                            const coords = pair.split(',');
+                            if (coords.length >= 2) {
+                                const lng = parseFloat(coords[0]);
+                                const lat = parseFloat(coords[1]);
+                                const ele = coords.length >= 3 ? parseFloat(coords[2]) : 0;
+                                if (!isNaN(lat) && !isNaN(lng)) parsedPts.push({ lng, lat, ele });
+                            }
+                        });
+                    } else {
+                        // 處理 gx:coord
+                        const gxCoords = lineStrings[i].getElementsByTagName("gx:coord");
+                        Array.from(gxCoords).forEach(node => {
+                            const coords = node.textContent.trim().split(' ');
+                            if (coords.length >= 2) {
+                                parsedPts.push({ lng: parseFloat(coords[0]), lat: parseFloat(coords[1]), ele: parseFloat(coords[2] || 0) });
+                            }
+                        });
+                    }
                 }
 
                 const nameNode = xmlDoc.getElementsByTagName("name")[0];
@@ -602,25 +655,19 @@
 
         async function processFile(file) {
             const name = file.name.toLowerCase();
-            
             if (name.endsWith('.kmz')) {
                 const reader = new FileReader();
                 reader.onload = async (e) => {
                     try {
                         const zip = await JSZip.loadAsync(e.target.result);
-                        // 尋找壓縮檔內的 .kml 檔案 (忽略大小寫)
                         const kmlFilename = Object.keys(zip.files).find(f => f.toLowerCase().endsWith('.kml'));
-                        
                         if (kmlFilename) {
-                            // 使用 async('string') 取代 'text' 確保編碼正確
                             const kmlText = await zip.files[kmlFilename].async('string');
                             parseKMLText(kmlText);
                         } else {
                             alert('KMZ 檔案中找不到 KML 路線資料。');
                         }
                     } catch (err) {
-                        console.warn('JSZip 解壓縮失敗，嘗試直接作為 KML 讀取...', err);
-                        // 安全備用方案：有些軟體匯出的 KMZ 其實只是改了副檔名的純 KML 檔
                         const fallbackReader = new FileReader();
                         fallbackReader.onload = (ev) => {
                             const content = ev.target.result;
@@ -644,10 +691,10 @@
         
         document.getElementById('gpx-upload').addEventListener('change', (e) => {
             if (e.target.files[0]) processFile(e.target.files[0]);
-            e.target.value = ''; // 清除 input 狀態以便重複上傳
+            e.target.value = ''; 
         });
 
-        // --- 4. 自訂地標與顏色選擇 ---
+        // --- 新增點位 ---
         let isAddingPoint = false;
         const addPointHint = document.getElementById('add-point-hint');
         const btnAddPoint = document.getElementById('btn-add-point');
@@ -663,7 +710,6 @@
             if (!isAddingPoint) return;
             if (tempPopup) tempPopup.remove();
 
-            // 建立預設的新地標資料
             const newMarkerData = { id: 'poi_' + Date.now(), lat: e.lngLat.lat, lng: e.lngLat.lng, name: '', desc: '', color: '#e27653', icon: 'mountain' };
             
             const formDOM = buildMarkerEditorForm(newMarkerData, 
@@ -686,7 +732,7 @@
                 .addTo(map);
         });
 
-        // --- 5. 專案管理介面邏輯 ---
+        // --- 專案管理 ---
         function openProjectModal() {
             renderProjectList();
             document.getElementById('project-modal').classList.remove('hidden');
@@ -706,7 +752,6 @@
                 const div = document.createElement('div');
                 div.className = `flex justify-between items-center p-3 rounded-xl border-2 transition cursor-pointer ${isCurrent ? 'border-[#5c7042] bg-white' : 'border-transparent bg-white/50 hover:bg-white'}`;
                 
-                // 點擊切換專案
                 div.onclick = (e) => {
                     if (e.target.tagName === 'I' || e.target.tagName === 'BUTTON') return;
                     loadProject(proj.id);
@@ -756,7 +801,7 @@
             }
         }
 
-        // --- 6. GPS 定位 ---
+        // --- GPS 定位 ---
         let watchId = null; let isTracking = false; let userMarker = null;
         const btnLocateText = document.getElementById('btn-locate-text');
         const gpsStatus = document.getElementById('gps-status');
@@ -784,24 +829,32 @@
             }
         }
 
+        // 優化：減少 GPS 更新時的高強度計算
+        let lastGpsCalcTime = 0;
         function updatePosition(position) {
             const lat = position.coords.latitude; const lng = position.coords.longitude;
             let statusText = `精度: ${Math.round(position.coords.accuracy)}m`;
 
             const currentProj = projects[currentProjectId];
-            if (currentProj && currentProj.routePoints && currentProj.routePoints.length > 0) {
+            const now = Date.now();
+            
+            // 每秒最多計算一次距離，避免手機發熱與 UI 卡頓
+            if (currentProj && currentProj.routePoints && currentProj.routePoints.length > 0 && now - lastGpsCalcTime > 1000) {
                 let minDist = Infinity; let closestPoint = null;
                 currentProj.routePoints.forEach(p => {
                     const d = getDistance(lat, lng, p.lat, p.lng) * 1000;
                     if (d < minDist) { minDist = d; closestPoint = p; }
                 });
                 if (closestPoint && minDist < 500) {
-                    eleChart.data.datasets[1].data = [{ x: closestPoint.dist, y: closestPoint.ele }];
-                    eleChart.update();
+                    if(eleChart) {
+                        eleChart.data.datasets[1].data = [{ x: closestPoint.dist, y: closestPoint.ele }];
+                        eleChart.update();
+                    }
                     statusText += ` | 高度: ${Math.round(closestPoint.ele)}m`;
-                } else {
+                } else if(eleChart) {
                     eleChart.data.datasets[1].data = []; eleChart.update();
                 }
+                lastGpsCalcTime = now;
             }
 
             gpsStatus.textContent = statusText;
@@ -816,14 +869,12 @@
             }
         }
 
-        // --- 7. 檢視模式控制 與 圖示初始化 ---
+        // --- 初始化 ---
         window.addEventListener('DOMContentLoaded', () => {
-            // 確保網頁結構都載入完畢後，才繪製圖示 (解決預覽視窗圖示出不來的問題)
             lucide.createIcons();
-            
             if (isViewOnly) {
                 const rightControls = document.getElementById('editor-controls-right');
-                if (rightControls) rightControls.style.display = 'none'; // 隱藏編輯與專案控制
+                if (rightControls) rightControls.style.display = 'none';
             }
         });
         
