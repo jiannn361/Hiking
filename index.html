@@ -167,7 +167,7 @@
                 </button>
             </div>
             
-            <div class="flex gap-3 h-28 w-full">
+            <div class="flex gap-3 h-36 w-full">
                 <!-- 左側數據統計 -->
                 <div class="flex flex-col justify-around bg-white/60 rounded-xl p-2 min-w-[70px] shrink-0 border border-white/50 shadow-sm">
                     <div class="flex flex-col items-center" title="總距離">
@@ -258,49 +258,49 @@
             localStorage.setItem('hiking_app_current_id', currentProjectId);
         }
 
-        // --- 1. MapLibre 地圖初始化 (使用免 API Key 的高品質開源/公部門圖資) ---
+        // --- 1. MapLibre 地圖初始化 (全面改用 Google 圖資) ---
         const map = new maplibregl.Map({
             container: 'map',
             style: {
                 version: 8,
                 sources: {
-                    // 1. OpenTopoMap (全球開源地形圖，具備等高線，非常適合登山)
-                    'open-topo': { 
+                    // Google 地形圖
+                    'google-topo': { 
                         type: 'raster', 
-                        tiles: ['https://a.tile.opentopomap.org/{z}/{x}/{y}.png'], 
+                        tiles: ['https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}'], 
                         tileSize: 256, 
-                        attribution: '&copy; OpenStreetMap, SRTM | &copy; OpenTopoMap' 
+                        attribution: '&copy; Google' 
                     },
-                    // 2. 內政部國土測繪中心 (台灣通用電子地圖，台灣道路/步道最精準)
-                    'tw-nlsc': { 
+                    // Google 標準地圖
+                    'google-standard': { 
                         type: 'raster', 
-                        tiles: ['https://wmts.nlsc.gov.tw/wmts/EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}'], 
+                        tiles: ['https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'], 
                         tileSize: 256, 
-                        attribution: '&copy; 內政部國土測繪中心' 
+                        attribution: '&copy; Google' 
                     },
-                    // 3. Google 衛星空照圖 (高解析度，替換 Esri 衛星圖)
+                    // Google 衛星空照圖 (含街道標籤混合)
                     'google-satellite': { 
                         type: 'raster', 
-                        tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'], 
+                        tiles: ['https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'], 
                         tileSize: 256, 
                         attribution: '&copy; Google' 
                     }
                 },
                 layers: [
-                    { id: 'topo-layer', type: 'raster', source: 'open-topo', minzoom: 0, maxzoom: 17, layout: { visibility: 'visible' } },
-                    { id: 'standard-layer', type: 'raster', source: 'tw-nlsc', minzoom: 0, maxzoom: 20, layout: { visibility: 'none' } },
+                    { id: 'topo-layer', type: 'raster', source: 'google-topo', minzoom: 0, maxzoom: 22, layout: { visibility: 'visible' } },
+                    { id: 'standard-layer', type: 'raster', source: 'google-standard', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } },
                     { id: 'satellite-layer', type: 'raster', source: 'google-satellite', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } }
                 ]
             },
             center: [120.6015, 23.5937],
             zoom: 13,
-            attributionControl: true // 啟用版權標示，尊重開源圖資規範
+            attributionControl: true
         });
 
         // --- 圖層切換 ---
         let currentMapStyle = 'topo';
         const styles = ['topo', 'standard', 'satellite'];
-        const styleNames = { topo: '地形', standard: '台灣標準', satellite: '衛星' };
+        const styleNames = { topo: '地形', standard: '標準', satellite: '衛星' };
 
         function toggleMapStyle() {
             let idx = (styles.indexOf(currentMapStyle) + 1) % styles.length;
@@ -563,7 +563,7 @@
             return points.filter((_, index) => index % step === 0 || index === points.length - 1);
         }
 
-        function saveImportedData(parsedPts, routeName) {
+        function saveImportedData(parsedPts, routeName, importedMarkers = []) {
             let totalDist = 0; let lastPoint = null;
             let asc = 0; let desc = 0;
             
@@ -582,9 +582,17 @@
             // 對資料進行降採樣以利儲存與渲染
             const thinnedData = thinRouteData(routeData);
 
-            projects[currentProjectId].routePoints = thinnedData;
-            projects[currentProjectId].totalAsc = asc;   // 儲存原始精確爬升
-            projects[currentProjectId].totalDesc = desc; // 儲存原始精確下降
+            if (parsedPts.length > 0) {
+                projects[currentProjectId].routePoints = thinnedData;
+                projects[currentProjectId].totalAsc = asc;
+                projects[currentProjectId].totalDesc = desc;
+            }
+
+            // 合併匯入的新地標
+            if (importedMarkers && importedMarkers.length > 0) {
+                if (!projects[currentProjectId].markers) projects[currentProjectId].markers = [];
+                projects[currentProjectId].markers = projects[currentProjectId].markers.concat(importedMarkers);
+            }
 
             if (routeName && projects[currentProjectId].name === '預設專案') {
                 projects[currentProjectId].name = routeName;
@@ -603,9 +611,31 @@
                 lng: parseFloat(pt.getAttribute("lon")),
                 ele: pt.getElementsByTagName("ele")[0] ? parseFloat(pt.getElementsByTagName("ele")[0].textContent) : 0
             }));
+            
+            // 處理 GPX 地標 (Waypoint)
+            const wpts = Array.from(xmlDoc.getElementsByTagName("wpt"));
+            const importedMarkers = wpts.map((pt, i) => {
+                const lat = parseFloat(pt.getAttribute("lat"));
+                const lng = parseFloat(pt.getAttribute("lon"));
+                const nameNode = pt.getElementsByTagName("name")[0];
+                const descNode = pt.getElementsByTagName("desc")[0];
+                return {
+                    id: 'poi_' + Date.now() + '_wpt_' + i,
+                    lat: lat,
+                    lng: lng,
+                    name: nameNode ? nameNode.textContent.trim() : "未命名地標",
+                    desc: descNode ? descNode.textContent.trim() : "",
+                    color: '#eab308', // 給匯入地標預設黃色以做區別
+                    icon: 'map-pin'
+                };
+            });
+
             const nameNode = xmlDoc.getElementsByTagName("name")[0];
-            if (parsedPts.length > 0) saveImportedData(parsedPts, nameNode ? nameNode.textContent : "匯入的 GPX");
-            else alert('無效的軌跡檔案');
+            if (parsedPts.length > 0 || importedMarkers.length > 0) {
+                saveImportedData(parsedPts, nameNode ? nameNode.textContent : "匯入的 GPX", importedMarkers);
+            } else {
+                alert('無效的軌跡檔案');
+            }
         }
 
         function parseKMLText(kmlText) {
@@ -644,9 +674,45 @@
                     }
                 }
 
+                // 處理 KML 地標 (Placemark -> Point)
+                const placemarks = xmlDoc.getElementsByTagName("Placemark");
+                const importedMarkers = [];
+                for (let i = 0; i < placemarks.length; i++) {
+                    const pm = placemarks[i];
+                    const pointNode = pm.getElementsByTagName("Point")[0];
+                    if (pointNode) {
+                        const coordNode = pointNode.getElementsByTagName("coordinates")[0];
+                        if (coordNode) {
+                            const coords = coordNode.textContent.trim().split(',');
+                            if (coords.length >= 2) {
+                                const lng = parseFloat(coords[0]);
+                                const lat = parseFloat(coords[1]);
+                                const pmName = pm.getElementsByTagName("name")[0];
+                                const pmDesc = pm.getElementsByTagName("description")[0];
+                                
+                                if (!isNaN(lat) && !isNaN(lng)) {
+                                    importedMarkers.push({
+                                        id: 'poi_' + Date.now() + '_kml_' + i,
+                                        lat: lat,
+                                        lng: lng,
+                                        name: pmName ? pmName.textContent.trim() : "未命名地標",
+                                        // 簡單去除 KML 描述中可能帶有的 HTML 標籤
+                                        desc: pmDesc ? pmDesc.textContent.replace(/(<([^>]+)>)/gi, "").trim() : "",
+                                        color: '#eab308', 
+                                        icon: 'map-pin'
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
                 const nameNode = xmlDoc.getElementsByTagName("name")[0];
-                if (parsedPts.length > 0) saveImportedData(parsedPts, nameNode ? nameNode.textContent : "匯入的 KML/KMZ");
-                else alert('無法解析此檔案的路線軌跡。請確認其包含軌跡資料。');
+                if (parsedPts.length > 0 || importedMarkers.length > 0) {
+                    saveImportedData(parsedPts, nameNode ? nameNode.textContent : "匯入的 KML/KMZ", importedMarkers);
+                } else {
+                    alert('無法解析此檔案的路線軌跡或地標。請確認其包含有效資料。');
+                }
             } catch (err) {
                 console.error("KML 解析異常:", err);
                 alert('檔案格式解析失敗，檔案可能損毀或格式不正確。');
