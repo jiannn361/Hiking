@@ -315,7 +315,8 @@
         let routeMarkers = []; // 管理當前顯示的地標
         let tempPopup = null; // 正在新增地標的氣泡
 
-        // --- Chart.js 高度表初始化 ---
+        // --- Chart.js 高度表初始化與互動 ---
+        let chartHoverMarker = null; // 宣告圖表連動的地圖標記
         const ctx = document.getElementById('elevationChart').getContext('2d');
         let eleChart = new Chart(ctx, {
             type: 'line',
@@ -327,6 +328,34 @@
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
+                layout: {
+                    padding: { right: 20 } // 解決右邊的數字超出邊界被切掉的問題
+                },
+                interaction: {
+                    mode: 'index', // 讓游標只要對齊垂直 X 軸就能觸發，不用精準指在線上
+                    intersect: false,
+                },
+                onHover: (event, activeElements) => {
+                    // 滑鼠/手指在圖表上滑動時，即時更新地圖上的藍色對應點
+                    if (activeElements.length > 0) {
+                        const index = activeElements[0].index;
+                        const proj = projects[currentProjectId];
+                        if (proj && proj.routePoints && proj.routePoints[index]) {
+                            const pt = proj.routePoints[index];
+                            if (!chartHoverMarker) {
+                                const el = document.createElement('div');
+                                el.className = 'w-4 h-4 bg-[#3b82f6] border-2 border-white rounded-full shadow-md pointer-events-none transition-all duration-75';
+                                chartHoverMarker = new maplibregl.Marker({ element: el }).setLngLat([pt.lng, pt.lat]).addTo(map);
+                            } else {
+                                chartHoverMarker.setLngLat([pt.lng, pt.lat]);
+                                if (!chartHoverMarker.getMap()) chartHoverMarker.addTo(map);
+                            }
+                        }
+                    } else {
+                        // 滑鼠離開圖表時，隱藏標記
+                        if (chartHoverMarker && chartHoverMarker.getMap()) chartHoverMarker.remove();
+                    }
+                },
                 scales: {
                     x: { type: 'linear', position: 'bottom', title: { display: false }, ticks: { color: '#6b725c' }, grid: { display: false } },
                     y: { title: { display: false }, ticks: { color: '#6b725c' }, grid: { color: 'rgba(107, 114, 92, 0.1)' } }
@@ -351,6 +380,8 @@
         function clearCurrentRoute() {
             routeMarkers.forEach(m => m.remove());
             routeMarkers = [];
+            if (chartHoverMarker) chartHoverMarker.remove(); // 清除路線時一併清除滑動標記
+            
             if(eleChart) {
                 eleChart.data.datasets[0].data = [];
                 eleChart.data.datasets[1].data = [];
