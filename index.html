@@ -247,22 +247,24 @@
             style: {
                 version: 8,
                 sources: {
-                    // 更換為高品質 Esri World Topo Map (畫面明亮、無難看黑影)
-                    'esri-topo': {
+                    // Google 地形圖 (加入 scale=2 啟用 Retina 高畫質，畫質極度清晰)
+                    'google-terrain': {
                         type: 'raster',
-                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'],
-                        tileSize: 256,
-                        attribution: 'Tiles &copy; Esri'
+                        tiles: ['https://mt1.google.com/vt/lyrs=p&hl=zh-TW&x={x}&y={y}&z={z}&scale=2'],
+                        tileSize: 512,
+                        attribution: '&copy; Google'
                     },
+                    // Google 標準地圖 (高畫質 HD 版)
                     'google-standard': {
                         type: 'raster',
-                        tiles: ['https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'],
-                        tileSize: 256
+                        tiles: ['https://mt1.google.com/vt/lyrs=m&hl=zh-TW&x={x}&y={y}&z={z}&scale=2'],
+                        tileSize: 512
                     },
+                    // Google 衛星空照圖 (高畫質 HD 版)
                     'google-satellite': {
                         type: 'raster',
-                        tiles: ['https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'],
-                        tileSize: 256
+                        tiles: ['https://mt1.google.com/vt/lyrs=y&hl=zh-TW&x={x}&y={y}&z={z}&scale=2'],
+                        tileSize: 512
                     },
                     'terrain-dem': {
                         type: 'raster-dem',
@@ -272,7 +274,7 @@
                     }
                 },
                 layers: [
-                    { id: 'esri-topo-layer', type: 'raster', source: 'esri-topo', minzoom: 0, maxzoom: 22, layout: { visibility: 'visible' } },
+                    { id: 'google-terrain-layer', type: 'raster', source: 'google-terrain', minzoom: 0, maxzoom: 22, layout: { visibility: 'visible' } },
                     { id: 'google-standard-layer', type: 'raster', source: 'google-standard', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } },
                     { id: 'google-satellite-layer', type: 'raster', source: 'google-satellite', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } }
                 ]
@@ -284,14 +286,14 @@
         });
 
         // --- 圖層與 3D 切換 ---
-        let currentMapStyle = 'topo';
-        const styles = ['topo', 'standard', 'satellite'];
-        const styleNames = { topo: '地形', standard: '標準', satellite: '衛星' };
+        let currentMapStyle = 'terrain';
+        const styles = ['terrain', 'standard', 'satellite'];
+        const styleNames = { terrain: '地形', standard: '標準', satellite: '衛星' };
 
         function toggleMapStyle() {
             let idx = (styles.indexOf(currentMapStyle) + 1) % styles.length;
             currentMapStyle = styles[idx];
-            map.setLayoutProperty('esri-topo-layer', 'visibility', currentMapStyle === 'topo' ? 'visible' : 'none');
+            map.setLayoutProperty('google-terrain-layer', 'visibility', currentMapStyle === 'terrain' ? 'visible' : 'none');
             map.setLayoutProperty('google-standard-layer', 'visibility', currentMapStyle === 'standard' ? 'visible' : 'none');
             map.setLayoutProperty('google-satellite-layer', 'visibility', currentMapStyle === 'satellite' ? 'visible' : 'none');
             document.getElementById('layer-name').textContent = styleNames[currentMapStyle];
@@ -395,67 +397,147 @@
             }
         }
 
+        // 建立地標表單 (供新增與編輯共用)
+        function buildMarkerEditorForm(mData, onSave, onCancel) {
+            const div = document.createElement('div');
+            div.className = "flex flex-col gap-2 min-w-[220px] p-1";
+            div.innerHTML = `
+                <input type="text" id="poi-name" value="${mData.name || ''}" placeholder="輸入地標名稱" class="w-full border-b border-gray-300 py-1 px-1 text-sm bg-transparent outline-none text-gray-800 font-bold focus:border-[#5c7042]">
+                <textarea id="poi-desc" placeholder="輸入介紹/備註..." class="w-full border border-gray-300 rounded p-1.5 text-xs outline-none focus:border-[#5c7042] mt-1 resize-none" rows="2">${mData.desc || ''}</textarea>
+                
+                <div class="text-[10px] text-gray-500 mt-1 px-1">選擇圖示：</div>
+                <div class="flex gap-2 justify-between px-1" id="icon-picker">
+                    ${['mountain', 'star', 'P', 'wc', 'tent'].map(icon => `
+                        <button class="w-7 h-7 rounded-lg flex items-center justify-center icon-btn transition ${mData.icon === icon || (!mData.icon && icon === 'mountain') ? 'ring-2 ring-offset-1 ring-gray-400 bg-gray-200' : 'bg-gray-100 opacity-60 hover:opacity-100'}" data-icon="${icon}">
+                            ${icon === 'P' ? '<span class="text-[12px] font-black text-gray-700 pointer-events-none">P</span>' : 
+                              icon === 'wc' ? '<span class="text-[10px] font-black text-gray-700 pointer-events-none">WC</span>' : 
+                              `<i data-lucide="${icon}" class="w-4 h-4 text-gray-700 pointer-events-none"></i>`}
+                        </button>
+                    `).join('')}
+                </div>
+
+                <div class="text-[10px] text-gray-500 mt-1 px-1">選擇顏色：</div>
+                <div class="flex gap-2 justify-between px-1" id="color-picker">
+                    ${['#e27653', '#3b82f6', '#10b981', '#8b5cf6', '#eab308'].map(color => `
+                        <button class="w-6 h-6 rounded-full color-btn transition ${mData.color === color || (!mData.color && color === '#e27653') ? 'ring-2 ring-offset-2 opacity-100' : 'opacity-60 hover:opacity-100'}" style="background-color: ${color}; --tw-ring-color: ${color};" data-color="${color}"></button>
+                    `).join('')}
+                </div>
+                
+                <div class="flex gap-2 mt-2">
+                    <button id="btn-save" class="flex-1 bg-[#5c7042] hover:bg-[#4a5a35] text-white rounded-lg py-1.5 text-sm transition shadow">儲存</button>
+                    <button id="btn-cancel" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg py-1.5 text-sm transition shadow">取消</button>
+                </div>
+            `;
+            
+            setTimeout(() => lucide.createIcons({ root: div }), 0);
+
+            let selectedColor = mData.color || '#e27653';
+            let selectedIcon = mData.icon || 'mountain';
+
+            const iconBtns = div.querySelectorAll('.icon-btn');
+            iconBtns.forEach(btn => btn.addEventListener('click', function() {
+                iconBtns.forEach(b => { b.classList.remove('ring-2', 'ring-offset-1', 'ring-gray-400', 'bg-gray-200'); b.classList.add('opacity-60', 'bg-gray-100'); });
+                this.classList.remove('opacity-60', 'bg-gray-100'); this.classList.add('ring-2', 'ring-offset-1', 'ring-gray-400', 'bg-gray-200');
+                selectedIcon = this.dataset.icon;
+            }));
+
+            const colorBtns = div.querySelectorAll('.color-btn');
+            colorBtns.forEach(btn => btn.addEventListener('click', function() {
+                colorBtns.forEach(b => { b.classList.remove('ring-2', 'ring-offset-2'); b.classList.add('opacity-60'); });
+                this.classList.remove('opacity-60'); this.classList.add('ring-2', 'ring-offset-2');
+                selectedColor = this.dataset.color;
+            }));
+
+            div.querySelector('#btn-save').addEventListener('click', () => {
+                const name = div.querySelector('#poi-name').value.trim() || '未命名地標';
+                const desc = div.querySelector('#poi-desc').value.trim();
+                onSave({ ...mData, name, desc, color: selectedColor, icon: selectedIcon });
+            });
+            div.querySelector('#btn-cancel').addEventListener('click', onCancel);
+
+            return div;
+        }
+
         function renderMarker(mData) {
             const el = document.createElement('div');
             el.className = 'custom-poi-marker';
             el.style.backgroundColor = mData.color || '#e27653';
             
-            // 加入圖示判斷
             const iconName = mData.icon || 'map-pin';
-            if (iconName === 'wc') {
-                el.innerHTML = `<span style="font-size: 11px; font-weight: 900; line-height: 1;">WC</span>`;
-            } else if (iconName === 'P') {
-                el.innerHTML = `<span style="font-size: 13px; font-weight: 900; line-height: 1;">P</span>`;
-            } else {
-                el.innerHTML = `<i data-lucide="${iconName}" class="w-4 h-4"></i>`;
-            }
+            if (iconName === 'wc') el.innerHTML = `<span style="font-size: 11px; font-weight: 900; line-height: 1;">WC</span>`;
+            else if (iconName === 'P') el.innerHTML = `<span style="font-size: 13px; font-weight: 900; line-height: 1;">P</span>`;
+            else el.innerHTML = `<i data-lucide="${iconName}" class="w-4 h-4"></i>`;
             
-            // 延遲一點點讓 Lucide 渲染 SVG 圖示
             setTimeout(() => lucide.createIcons({ root: el }), 0);
 
-            const marker = new maplibregl.Marker({ element: el })
+            // 設定可拖曳 (只要不是純檢視模式即可拖曳)
+            const marker = new maplibregl.Marker({ element: el, draggable: !isViewOnly })
                 .setLngLat([mData.lng, mData.lat])
-                .setPopup(new maplibregl.Popup({ offset: 15 }).setHTML(`<b class="text-sm px-1 text-gray-800">${mData.name}</b>`))
                 .addTo(map);
             
-            // 允許刪除地標的邏輯 (雙擊地標刪除)
+            const popup = new maplibregl.Popup({ offset: 15, closeButton: false });
+            
+            function showViewMode() {
+                const div = document.createElement('div');
+                div.className = 'p-1 min-w-[150px]';
+                let html = `<b class="text-sm px-1 text-gray-800 block">${mData.name}</b>`;
+                if(mData.desc) html += `<p class="text-[11px] text-gray-600 px-1 mt-1 whitespace-pre-wrap">${mData.desc}</p>`;
+                
+                if (!isViewOnly) {
+                    html += `<div class="flex gap-2 mt-2 pt-2 border-t border-gray-200 px-1">
+                        <button class="text-xs text-[#5c7042] font-bold hover:underline btn-edit">編輯</button>
+                        <button class="text-xs text-red-500 font-bold hover:underline btn-delete">刪除</button>
+                    </div>`;
+                }
+                div.innerHTML = html;
+
+                if (!isViewOnly) {
+                    div.querySelector('.btn-edit').onclick = () => popup.setDOMContent(showEditMode());
+                    div.querySelector('.btn-delete').onclick = () => {
+                        if (confirm(`確定要刪除地標「${mData.name}」嗎？`)) {
+                            marker.remove();
+                            projects[currentProjectId].markers = projects[currentProjectId].markers.filter(m => m.id !== mData.id);
+                            saveToLocal();
+                        }
+                    };
+                }
+                return div;
+            }
+
+            function showEditMode() {
+                return buildMarkerEditorForm(mData, 
+                    (updatedData) => {
+                        const index = projects[currentProjectId].markers.findIndex(m => m.id === mData.id);
+                        if (index !== -1) {
+                            projects[currentProjectId].markers[index] = updatedData;
+                            saveToLocal();
+                            marker.remove();
+                            renderMarker(updatedData); // 重新渲染更新
+                        }
+                    }, 
+                    () => popup.setDOMContent(showViewMode())
+                );
+            }
+
+            popup.setDOMContent(showViewMode());
+            marker.setPopup(popup);
+
+            // 拖曳結束更新座標
             if (!isViewOnly) {
-                el.addEventListener('dblclick', (e) => {
-                    e.stopPropagation();
-                    if (confirm(`確定要刪除地標「${mData.name}」嗎？`)) {
-                        marker.remove();
-                        projects[currentProjectId].markers = projects[currentProjectId].markers.filter(m => m.id !== mData.id);
-                        saveToLocal();
-                    }
+                marker.on('dragend', () => {
+                    const lngLat = marker.getLngLat();
+                    mData.lat = lngLat.lat;
+                    mData.lng = lngLat.lng;
+                    const index = projects[currentProjectId].markers.findIndex(m => m.id === mData.id);
+                    if (index !== -1) projects[currentProjectId].markers[index] = mData;
+                    saveToLocal();
                 });
             }
+
             routeMarkers.push(marker);
         }
 
-        // --- GPX 解析邏輯 ---
-        function getDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; const dLat = (lat2-lat1)*Math.PI/180; const dLon = (lon2-lon1)*Math.PI/180;
-            const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-
-        function saveImportedData(parsedPts, routeName) {
-            let totalDist = 0; let lastPoint = null;
-            const routeData = parsedPts.map(pt => {
-                if (lastPoint) totalDist += getDistance(lastPoint.lat, lastPoint.lng, pt.lat, pt.lng);
-                lastPoint = pt;
-                return { lat: pt.lat, lng: pt.lng, ele: pt.ele, dist: totalDist };
-            });
-
-            // 更新當前專案資料並存檔 (限制存檔大小，避免 localStorage 爆滿)
-            projects[currentProjectId].routePoints = routeData;
-            if (routeName && projects[currentProjectId].name === '預設專案') {
-                projects[currentProjectId].name = routeName;
-            }
-            saveToLocal();
-            loadProject(currentProjectId); // 重新渲染畫面
-        }
-
+        // --- GPX/KML 解析邏輯 ---
         function parseGPXText(gpxData) {
             const xmlDoc = new DOMParser().parseFromString(gpxData, "text/xml");
             const pts = Array.from(xmlDoc.getElementsByTagName("trkpt"));
@@ -468,13 +550,54 @@
             }));
             const nameNode = xmlDoc.getElementsByTagName("name")[0];
             if (parsedPts.length > 0) saveImportedData(parsedPts, nameNode ? nameNode.textContent : "匯入的 GPX");
+            else alert('無效的軌跡檔案');
         }
 
-        function processFile(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => parseGPXText(e.target.result); // 為保持輕量，這裡以 GPX 為例
-            reader.readAsText(file);
+        // 解析 KML 字串
+        function parseKMLText(kmlText) {
+            const xmlDoc = new DOMParser().parseFromString(kmlText, "text/xml");
+            const lineStrings = xmlDoc.getElementsByTagName("LineString");
+            const parsedPts = [];
+
+            for (let i = 0; i < lineStrings.length; i++) {
+                const coordNode = lineStrings[i].getElementsByTagName("coordinates")[0];
+                if (!coordNode) continue;
+                coordNode.textContent.trim().split(/\s+/).forEach(pair => {
+                    const coords = pair.split(',');
+                    if (coords.length >= 2) parsedPts.push({ lng: parseFloat(coords[0]), lat: parseFloat(coords[1]), ele: coords[2] ? parseFloat(coords[2]) : 0 });
+                });
+            }
+
+            const nameNode = xmlDoc.getElementsByTagName("name")[0];
+            if (parsedPts.length > 0) saveImportedData(parsedPts, nameNode ? nameNode.textContent : "匯入的 KML/KMZ");
+            else alert('無法解析此檔案的路線軌跡');
         }
+
+        async function processFile(file) {
+            const name = file.name.toLowerCase();
+            const reader = new FileReader();
+
+            if (name.endsWith('.kmz')) {
+                reader.onload = async (e) => {
+                    try {
+                        const zip = await JSZip.loadAsync(e.target.result);
+                        const kmlFile = Object.values(zip.files).find(f => f.name.toLowerCase().endsWith('.kml'));
+                        if (kmlFile) parseKMLText(await kmlFile.async('text'));
+                        else alert('KMZ 檔案中找不到 KML 路線資料。');
+                    } catch (err) {
+                        alert('無法解析 KMZ 檔案，檔案可能損毀。');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (name.endsWith('.kml')) {
+                reader.onload = (e) => parseKMLText(e.target.result);
+                reader.readAsText(file);
+            } else {
+                reader.onload = (e) => parseGPXText(e.target.result);
+                reader.readAsText(file);
+            }
+        }
+        
         document.getElementById('gpx-upload').addEventListener('change', (e) => {
             if (e.target.files[0]) processFile(e.target.files[0]);
             e.target.value = ''; // 清除 input 狀態以便重複上傳
@@ -494,79 +617,28 @@
 
         map.on('click', (e) => {
             if (!isAddingPoint) return;
-            if (tempPopup) tempPopup.remove(); // 移除尚未儲存的彈窗
+            if (tempPopup) tempPopup.remove();
 
-            // 建立顏色與圖示選擇器的彈窗 UI
-            const popupContent = document.createElement('div');
-            popupContent.className = "flex flex-col gap-2 min-w-[200px] p-1";
-            popupContent.innerHTML = `
-                <input type="text" id="new-poi-name" placeholder="輸入地標名稱" class="w-full border-b border-gray-300 py-1 px-2 text-sm bg-transparent outline-none text-gray-800 font-bold focus:border-[#5c7042]" autofocus>
-                
-                <div class="text-[10px] text-gray-500 mt-1 px-1">選擇圖示：</div>
-                <div class="flex gap-2 justify-between px-1" id="icon-picker">
-                    <button class="w-7 h-7 rounded-lg bg-gray-200 flex items-center justify-center icon-btn ring-2 ring-offset-1 ring-gray-400" data-icon="mountain"><i data-lucide="mountain" class="w-4 h-4 text-gray-700 pointer-events-none"></i></button>
-                    <button class="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center icon-btn opacity-60 hover:opacity-100 transition" data-icon="star"><i data-lucide="star" class="w-4 h-4 text-gray-700 pointer-events-none"></i></button>
-                    <button class="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center icon-btn opacity-60 hover:opacity-100 transition" data-icon="P"><span class="text-[12px] font-black text-gray-700 pointer-events-none">P</span></button>
-                    <button class="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center icon-btn opacity-60 hover:opacity-100 transition" data-icon="wc"><span class="text-[10px] font-black text-gray-700 pointer-events-none">WC</span></button>
-                    <button class="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center icon-btn opacity-60 hover:opacity-100 transition" data-icon="tent"><i data-lucide="tent" class="w-4 h-4 text-gray-700 pointer-events-none"></i></button>
-                </div>
-
-                <div class="text-[10px] text-gray-500 mt-1 px-1">選擇顏色：</div>
-                <div class="flex gap-2 justify-between px-1" id="color-picker">
-                    <button class="w-6 h-6 rounded-full bg-[#e27653] ring-2 ring-offset-2 ring-[#e27653] color-btn" data-color="#e27653"></button>
-                    <button class="w-6 h-6 rounded-full bg-[#3b82f6] color-btn opacity-60 hover:opacity-100 transition" data-color="#3b82f6"></button>
-                    <button class="w-6 h-6 rounded-full bg-[#10b981] color-btn opacity-60 hover:opacity-100 transition" data-color="#10b981"></button>
-                    <button class="w-6 h-6 rounded-full bg-[#8b5cf6] color-btn opacity-60 hover:opacity-100 transition" data-color="#8b5cf6"></button>
-                    <button class="w-6 h-6 rounded-full bg-[#eab308] color-btn opacity-60 hover:opacity-100 transition" data-color="#eab308"></button>
-                </div>
-                <button id="save-poi-btn" class="w-full bg-[#5c7042] hover:bg-[#4a5a35] text-white rounded-lg py-1.5 text-sm mt-2 transition shadow">儲存地標</button>
-            `;
-
-            let selectedColor = '#e27653';
-            let selectedIcon = 'mountain';
+            // 建立預設的新地標資料
+            const newMarkerData = { id: 'poi_' + Date.now(), lat: e.lngLat.lat, lng: e.lngLat.lng, name: '', desc: '', color: '#e27653', icon: 'mountain' };
             
-            // 渲染彈窗內的 Lucide 圖示
-            setTimeout(() => lucide.createIcons({ root: popupContent }), 0);
+            const formDOM = buildMarkerEditorForm(newMarkerData, 
+                (finalData) => {
+                    projects[currentProjectId].markers.push(finalData);
+                    saveToLocal();
+                    renderMarker(finalData);
+                    tempPopup.remove();
+                    toggleAddPointMode();
+                },
+                () => {
+                    tempPopup.remove();
+                    toggleAddPointMode();
+                }
+            );
 
-            // 處理圖示點擊事件
-            const iconBtns = popupContent.querySelectorAll('.icon-btn');
-            iconBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    iconBtns.forEach(b => { b.classList.remove('ring-2', 'ring-offset-1', 'ring-gray-400', 'bg-gray-200'); b.classList.add('opacity-60', 'bg-gray-100'); });
-                    this.classList.remove('opacity-60', 'bg-gray-100');
-                    this.classList.add('ring-2', 'ring-offset-1', 'ring-gray-400', 'bg-gray-200');
-                    selectedIcon = this.dataset.icon;
-                });
-            });
-
-            // 處理顏色點擊事件
-            const colorBtns = popupContent.querySelectorAll('.color-btn');
-            colorBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    colorBtns.forEach(b => { b.classList.remove('ring-2', 'ring-offset-2', 'ring-' + b.dataset.color); b.classList.add('opacity-60'); });
-                    this.classList.remove('opacity-60');
-                    this.classList.add('ring-2', 'ring-offset-2', `ring-[${this.dataset.color}]`);
-                    selectedColor = this.dataset.color;
-                });
-            });
-
-            // 處理儲存事件
-            popupContent.querySelector('#save-poi-btn').addEventListener('click', () => {
-                const name = popupContent.querySelector('#new-poi-name').value.trim() || '未命名地標';
-                const mData = { id: 'poi_' + Date.now(), lat: e.lngLat.lat, lng: e.lngLat.lng, name: name, color: selectedColor, icon: selectedIcon };
-                
-                projects[currentProjectId].markers.push(mData);
-                saveToLocal();
-                renderMarker(mData); // 畫在地圖上
-                
-                tempPopup.remove();
-                toggleAddPointMode(); // 關閉新增模式
-            });
-
-            // 顯示在地圖上
-            tempPopup = new maplibregl.Popup({ closeOnClick: false, offset: 15 })
+            tempPopup = new maplibregl.Popup({ closeOnClick: false, offset: 15, closeButton: false })
                 .setLngLat(e.lngLat)
-                .setDOMContent(popupContent)
+                .setDOMContent(formDOM)
                 .addTo(map);
         });
 
