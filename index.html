@@ -141,15 +141,15 @@
         </button>
 
         <div id="editor-controls-right" class="flex flex-col gap-2.5 pointer-events-none mt-1">
-            <button onclick="openProjectModal()" class="bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-3 hover:bg-white transition text-[#4a503d] pointer-events-auto border border-white/60 shadow-md flex flex-col items-center" title="專案管理">
-                <i data-lucide="folder" class="w-5 h-5"></i>
-                <span class="text-[8px] font-bold mt-0.5">專案</span>
-            </button>
-            
-            <label for="gpx-upload" class="bg-[#f0ece1]/90 backdrop-blur-md border border-white/60 shadow-md rounded-full p-3.5 hover:bg-white cursor-pointer transition text-[#4a503d] pointer-events-auto flex flex-col items-center" title="匯入路線">
+            <label for="gpx-upload" class="bg-[#f0ece1]/90 backdrop-blur-md border border-white/60 shadow-md rounded-full p-3.5 hover:bg-white cursor-pointer transition text-[#4a503d] pointer-events-auto flex flex-col items-center" title="匯入路線 (GPX/KML)">
                 <i data-lucide="download" class="w-5 h-5"></i>
             </label>
             <input type="file" id="gpx-upload" accept=".gpx,.kml,.kmz">
+
+            <!-- 新增：匯出 KML 按鈕 -->
+            <button onclick="exportToKML()" class="bg-[#f0ece1]/90 backdrop-blur-md border border-white/60 shadow-md rounded-full p-3.5 hover:bg-white transition text-[#4a503d] pointer-events-auto flex flex-col items-center" title="匯出目前路線為 KML">
+                <i data-lucide="upload" class="w-5 h-5"></i>
+            </button>
 
             <button id="btn-add-point" onclick="toggleAddPointMode()" class="bg-[#f0ece1]/90 backdrop-blur-md border border-white/60 shadow-md rounded-full p-3.5 hover:bg-white transition text-[#4a503d] pointer-events-auto flex flex-col items-center" title="新增地標">
                 <i data-lucide="map-pin" class="w-5 h-5"></i>
@@ -226,6 +226,12 @@
                 <i data-lucide="plus" class="w-4 h-4"></i> 建立新專案
             </button>
         </div>
+    </div>
+
+    <!-- 載入中遮罩 -->
+    <div id="loading-overlay" class="ui-layer fixed inset-0 bg-[#f0ece1]/80 backdrop-blur-sm hidden flex-col justify-center items-center pointer-events-auto z-[9999]">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-[#5c7042] border-t-transparent"></div>
+        <span class="mt-4 font-bold text-[#3e4433]">載入路線中...</span>
     </div>
 
     <script>
@@ -345,16 +351,14 @@
                             const pt = proj.routePoints[index];
                             if (!chartHoverMarker) {
                                 const el = document.createElement('div');
-                                el.className = 'w-4 h-4 bg-[#3b82f6] border-2 border-white rounded-full shadow-md pointer-events-none transition-all duration-75';
+                                // 優化：移除 transition 動畫，讓藍點移動瞬間跟手、不再延遲亂飄
+                                el.className = 'w-4 h-4 bg-[#3b82f6] border-2 border-white rounded-full shadow-md pointer-events-none';
                                 chartHoverMarker = new maplibregl.Marker({ element: el }).setLngLat([pt.lng, pt.lat]).addTo(map);
                             } else {
                                 chartHoverMarker.setLngLat([pt.lng, pt.lat]);
                                 if (!chartHoverMarker.getMap()) chartHoverMarker.addTo(map);
                             }
                         }
-                    } else {
-                        // 滑鼠離開圖表時，隱藏標記
-                        if (chartHoverMarker && chartHoverMarker.getMap()) chartHoverMarker.remove();
                     }
                 },
                 scales: {
@@ -372,27 +376,86 @@
             }
         });
 
+        // --- 提取共用的清除連動游標函數 ---
+        function clearSyncHover() {
+            if (chartHoverMarker && chartHoverMarker.getMap()) chartHoverMarker.remove();
+            if (eleChart) {
+                eleChart.setActiveElements([]);
+                eleChart.tooltip.setActiveElements([], { x: 0, y: 0 });
+                eleChart.update();
+            }
+        }
+
         // 確保滑鼠或手指離開圖表時，藍色連動標記會確實消失 (優化版)
         const chartPanelElem = document.getElementById('chart-panel');
         
-        // 桌面版：改用 mouseleave 監聽整個面板，比 mouseout 更穩定不會亂跳
-        chartPanelElem.addEventListener('mouseleave', () => {
-            if (chartHoverMarker && chartHoverMarker.getMap()) chartHoverMarker.remove();
-        });
+        // 桌面版：改用 mouseleave 監聽整個面板
+        chartPanelElem.addEventListener('mouseleave', clearSyncHover);
         
         // 手機版：放開圖表時，給予緩衝時間後強制清除圓點
         chartPanelElem.addEventListener('touchend', () => {
-            setTimeout(() => {
-                if (chartHoverMarker && chartHoverMarker.getMap()) chartHoverMarker.remove();
-            }, 300);
+            setTimeout(clearSyncHover, 300);
         });
 
-        // 保險機制：點擊畫布外圍 (例如地圖) 時也強制清除藍色小點
+        // 保險機制一：點擊畫布外圍 (例如地圖) 時也強制清除藍色小點
         window.addEventListener('click', (e) => {
             if (!chartPanelElem.contains(e.target)) {
-                if (chartHoverMarker && chartHoverMarker.getMap()) chartHoverMarker.remove();
+                clearSyncHover();
             }
         });
+
+        // 保險機制二：當地圖開始被滑動或縮放時，立刻清除藍點，防止殘留在畫面上
+        map.on('movestart', clearSyncHover);
+
+        // --- 地圖與圖表雙向連動 ---
+        // 當滑鼠在地圖的軌跡線上移動時，圖表也要跟著顯示對應高度
+        map.on('mousemove', 'route-line', (e) => {
+            // 【關鍵修復】如果是手機觸控滑動、或是地圖正在被拖曳/縮放，則不觸發，避免藍點死纏爛打
+            if (e.originalEvent && (e.originalEvent.pointerType === 'touch' || e.originalEvent.touches)) return;
+            if (map.isMoving() || map.isDragging() || map.isZooming()) return;
+
+            if (!chartVisible) return;
+            const proj = projects[currentProjectId];
+            if (!proj || !proj.routePoints || proj.routePoints.length === 0) return;
+
+            const lng = e.lngLat.lng;
+            const lat = e.lngLat.lat;
+
+            // 尋找軌跡上最接近游標的點
+            let closestIdx = 0;
+            let minDist = Infinity;
+            for (let i = 0; i < proj.routePoints.length; i++) {
+                const pt = proj.routePoints[i];
+                const dx = pt.lng - lng;
+                const dy = pt.lat - lat;
+                const dist = dx*dx + dy*dy;
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestIdx = i;
+                }
+            }
+
+            // 更新地圖藍點
+            const pt = proj.routePoints[closestIdx];
+            if (!chartHoverMarker) {
+                const el = document.createElement('div');
+                el.className = 'w-4 h-4 bg-[#3b82f6] border-2 border-white rounded-full shadow-md pointer-events-none';
+                chartHoverMarker = new maplibregl.Marker({ element: el }).setLngLat([pt.lng, pt.lat]).addTo(map);
+            } else {
+                chartHoverMarker.setLngLat([pt.lng, pt.lat]);
+                if (!chartHoverMarker.getMap()) chartHoverMarker.addTo(map);
+            }
+
+            // 更新圖表游標
+            if (eleChart) {
+                eleChart.setActiveElements([{ datasetIndex: 0, index: closestIdx }]);
+                eleChart.tooltip.setActiveElements([{ datasetIndex: 0, index: closestIdx }], { x: 0, y: 0 });
+                eleChart.update();
+            }
+        });
+
+        // 當滑鼠離開地圖軌跡線時，清除藍點與圖表游標
+        map.on('mouseleave', 'route-line', clearSyncHover);
 
         let chartVisible = false;
         function toggleChart() {
@@ -402,9 +465,42 @@
             chartVisible = !chartVisible;
         }
 
-        // --- 專案載入 ---
+        // --- 載入動畫控制 ---
+        function showLoading() {
+            const el = document.getElementById('loading-overlay');
+            if(el) { el.classList.remove('hidden'); el.classList.add('flex'); }
+        }
+        function hideLoading() {
+            const el = document.getElementById('loading-overlay');
+            if(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+        }
+
+        // --- 專案載入與 URL 自動獲取 ---
         map.on('load', () => {
-            loadProject(currentProjectId);
+            const routeUrl = urlParams.get('route');
+            if (routeUrl) {
+                // 如果網址帶有 ?route=...，則自動下載該檔案並顯示
+                showLoading();
+                fetch(routeUrl)
+                    .then(res => {
+                        if (!res.ok) throw new Error('網路回應錯誤');
+                        return res.blob();
+                    })
+                    .then(blob => {
+                        // 從網址中推斷檔名與副檔名，確保解析器能判斷是 KML 還是 GPX
+                        const filename = routeUrl.split('?')[0].split('/').pop() || 'auto-loaded.kml';
+                        const file = new File([blob], filename, { type: blob.type });
+                        processFile(file);
+                    })
+                    .catch(err => {
+                        console.error("自動載入路線失敗:", err);
+                        alert("無法自動載入網址中的路線檔案，請確認網址正確且無跨域 (CORS) 限制。");
+                        hideLoading();
+                        loadProject(currentProjectId); // 失敗則載入本地預設
+                    });
+            } else {
+                loadProject(currentProjectId);
+            }
         });
 
         function clearCurrentRoute() {
@@ -459,6 +555,16 @@
 
                 if(eleChart) {
                     eleChart.data.datasets[0].data = proj.routePoints.map(p => ({ x: p.dist, y: p.ele }));
+                    
+                    // 動態調整 Y 軸(高度)範圍，讓山勢形狀更立體明顯
+                    const elevations = proj.routePoints.map(p => p.ele);
+                    const minEle = Math.min(...elevations);
+                    const maxEle = Math.max(...elevations);
+                    const paddingEle = Math.max(10, (maxEle - minEle) * 0.15); // 上下各留 15% 空間緩衝
+                    
+                    eleChart.options.scales.y.min = Math.floor(Math.max(0, minEle - paddingEle));
+                    eleChart.options.scales.y.max = Math.ceil(maxEle + paddingEle);
+                    
                     eleChart.update();
                 }
                 
@@ -660,6 +766,7 @@
             }
             saveToLocal();
             loadProject(currentProjectId);
+            hideLoading(); // 載入完成，隱藏動畫
         }
 
         function parseGPXText(gpxData) {
@@ -696,6 +803,7 @@
                 saveImportedData(parsedPts, nameNode ? nameNode.textContent : "匯入的 GPX", importedMarkers);
             } else {
                 alert('無效的軌跡檔案');
+                hideLoading();
             }
         }
 
@@ -773,14 +881,17 @@
                     saveImportedData(parsedPts, nameNode ? nameNode.textContent : "匯入的 KML/KMZ", importedMarkers);
                 } else {
                     alert('無法解析此檔案的路線軌跡或地標。請確認其包含有效資料。');
+                    hideLoading();
                 }
             } catch (err) {
                 console.error("KML 解析異常:", err);
                 alert('檔案格式解析失敗，檔案可能損毀或格式不正確。');
+                hideLoading();
             }
         }
 
         async function processFile(file) {
+            showLoading(); // 開始處理檔案時顯示動畫
             const name = file.name.toLowerCase();
             if (name.endsWith('.kmz')) {
                 const reader = new FileReader();
@@ -820,6 +931,50 @@
             if (e.target.files[0]) processFile(e.target.files[0]);
             e.target.value = ''; 
         });
+
+        // --- 新增匯出 KML 功能 ---
+        function exportToKML() {
+            const proj = projects[currentProjectId];
+            if (!proj || (!proj.routePoints.length && !proj.markers.length)) {
+                alert('目前沒有可以匯出的軌跡或地標資料！');
+                return;
+            }
+
+            // 建立標準的 KML XML 結構
+            let kml = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n  <Document>\n    <name>${proj.name || '匯出專案'}</name>\n`;
+
+            // 匯出軌跡線
+            if (proj.routePoints && proj.routePoints.length > 0) {
+                kml += `    <Placemark>\n      <name>路線軌跡</name>\n      <LineString>\n        <tessellate>1</tessellate>\n        <coordinates>\n`;
+                proj.routePoints.forEach(p => {
+                    kml += `          ${p.lng},${p.lat},${p.ele || 0}\n`;
+                });
+                kml += `        </coordinates>\n      </LineString>\n    </Placemark>\n`;
+            }
+
+            // 匯出使用者自訂地標
+            if (proj.markers && proj.markers.length > 0) {
+                proj.markers.forEach(m => {
+                    // 替換掉可能破壞 XML 的特殊字元
+                    const safeName = (m.name || '未命名地標').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    const safeDesc = (m.desc || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    kml += `    <Placemark>\n      <name>${safeName}</name>\n      <description>${safeDesc}</description>\n      <Point>\n        <coordinates>${m.lng},${m.lat},0</coordinates>\n      </Point>\n    </Placemark>\n`;
+                });
+            }
+
+            kml += `  </Document>\n</kml>`;
+
+            // 觸發瀏覽器下載
+            const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${proj.name || 'route'}.kml`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
 
         // --- 新增點位 ---
         let isAddingPoint = false;
