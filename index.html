@@ -264,24 +264,24 @@
             style: {
                 version: 8,
                 sources: {
-                    // Google 地形圖
+                    // Google 地形圖 (加入 scale=2 支援高畫質 Retina 螢幕，hl=zh-TW 強制繁體中文)
                     'google-topo': { 
                         type: 'raster', 
-                        tiles: ['https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}'], 
+                        tiles: ['https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}&scale=2&hl=zh-TW'], 
                         tileSize: 256, 
                         attribution: '&copy; Google' 
                     },
                     // Google 標準地圖
                     'google-standard': { 
                         type: 'raster', 
-                        tiles: ['https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'], 
+                        tiles: ['https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&scale=2&hl=zh-TW'], 
                         tileSize: 256, 
                         attribution: '&copy; Google' 
                     },
                     // Google 衛星空照圖 (含街道標籤混合)
                     'google-satellite': { 
                         type: 'raster', 
-                        tiles: ['https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'], 
+                        tiles: ['https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}&scale=2&hl=zh-TW'], 
                         tileSize: 256, 
                         attribution: '&copy; Google' 
                     }
@@ -372,15 +372,26 @@
             }
         });
 
-        // 確保滑鼠或手指離開圖表時，藍色連動標記會確實消失
-        const chartCanvas = document.getElementById('elevationChart');
-        chartCanvas.addEventListener('mouseout', () => {
+        // 確保滑鼠或手指離開圖表時，藍色連動標記會確實消失 (優化版)
+        const chartPanelElem = document.getElementById('chart-panel');
+        
+        // 桌面版：改用 mouseleave 監聽整個面板，比 mouseout 更穩定不會亂跳
+        chartPanelElem.addEventListener('mouseleave', () => {
             if (chartHoverMarker && chartHoverMarker.getMap()) chartHoverMarker.remove();
         });
-        chartCanvas.addEventListener('touchend', () => {
+        
+        // 手機版：放開圖表時，給予緩衝時間後強制清除圓點
+        chartPanelElem.addEventListener('touchend', () => {
             setTimeout(() => {
                 if (chartHoverMarker && chartHoverMarker.getMap()) chartHoverMarker.remove();
-            }, 100);
+            }, 300);
+        });
+
+        // 保險機制：點擊畫布外圍 (例如地圖) 時也強制清除藍色小點
+        window.addEventListener('click', (e) => {
+            if (!chartPanelElem.contains(e.target)) {
+                if (chartHoverMarker && chartHoverMarker.getMap()) chartHoverMarker.remove();
+            }
         });
 
         let chartVisible = false;
