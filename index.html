@@ -1180,30 +1180,48 @@
 
         // 優化：減少 GPS 更新時的高強度計算
         let lastGpsCalcTime = 0;
+        let lastKnownHeight = null;
         function updatePosition(position) {
             const lat = position.coords.latitude; const lng = position.coords.longitude;
             let statusText = `精度: ${Math.round(position.coords.accuracy)}m`;
+
+            // 計算距離目標點距離 (設為目標的地標)
+            if (targetMarker) {
+                const d = getDistance(lat, lng, targetMarker.lat, targetMarker.lng);
+                statusText += ` | 距${targetMarker.name.slice(0,4)}: ${d < 1 ? Math.round(d*1000)+'m' : d.toFixed(2)+'km'}`;
+            }
 
             const currentProj = projects[currentProjectId];
             const now = Date.now();
             
             // 每秒最多計算一次距離，避免手機發熱與 UI 卡頓
-            if (currentProj && currentProj.routePoints && currentProj.routePoints.length > 0 && now - lastGpsCalcTime > 1000) {
-                let minDist = Infinity; let closestPoint = null;
-                currentProj.routePoints.forEach(p => {
-                    const d = getDistance(lat, lng, p.lat, p.lng) * 1000;
-                    if (d < minDist) { minDist = d; closestPoint = p; }
-                });
-                if (closestPoint && minDist < 500) {
-                    if(eleChart) {
-                        eleChart.data.datasets[1].data = [{ x: closestPoint.dist, y: closestPoint.ele }];
-                        eleChart.update();
+            if (currentProj && currentProj.routePoints && currentProj.routePoints.length > 0) {
+                if (now - lastGpsCalcTime > 1000) {
+                    let minDist = Infinity; let closestPoint = null;
+                    currentProj.routePoints.forEach(p => {
+                        const d = getDistance(lat, lng, p.lat, p.lng) * 1000;
+                        if (d < minDist) { minDist = d; closestPoint = p; }
+                    });
+                    if (closestPoint && minDist < 500) {
+                        if(eleChart) {
+                            eleChart.data.datasets[1].data = [{ x: closestPoint.dist, y: closestPoint.ele }];
+                            eleChart.update();
+                        }
+                        lastKnownHeight = Math.round(closestPoint.ele);
+                    } else {
+                        if(eleChart) {
+                            eleChart.data.datasets[1].data = []; eleChart.update();
+                        }
+                        lastKnownHeight = null;
                     }
-                    statusText += ` | 高度: ${Math.round(closestPoint.ele)}m`;
-                } else if(eleChart) {
-                    eleChart.data.datasets[1].data = []; eleChart.update();
+                    lastGpsCalcTime = now;
                 }
-                lastGpsCalcTime = now;
+            } else {
+                lastKnownHeight = null;
+            }
+
+            if (lastKnownHeight !== null) {
+                statusText += ` | 高: ${lastKnownHeight}m`;
             }
 
             gpsStatus.textContent = statusText;
