@@ -137,7 +137,7 @@
 
         <button id="btn-layer" onclick="toggleMapStyle()" class="bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-2.5 hover:bg-white active:scale-95 transition text-[#4a503d] pointer-events-auto border border-white/60 shadow-md flex flex-col items-center mt-1">
             <i data-lucide="layers" class="w-5 h-5"></i>
-            <span id="layer-name" class="text-[8px] font-bold mt-0.5">地形</span>
+            <span id="layer-name" class="text-[8px] font-bold mt-0.5">衛星</span>
         </button>
 
         <div id="editor-controls-right" class="flex flex-col gap-2.5 pointer-events-none mt-1">
@@ -287,9 +287,9 @@
                     }
                 },
                 layers: [
-                    { id: 'topo-layer', type: 'raster', source: 'google-topo', minzoom: 0, maxzoom: 22, layout: { visibility: 'visible' } },
+                    { id: 'topo-layer', type: 'raster', source: 'google-topo', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } },
                     { id: 'standard-layer', type: 'raster', source: 'google-standard', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } },
-                    { id: 'satellite-layer', type: 'raster', source: 'google-satellite', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } }
+                    { id: 'satellite-layer', type: 'raster', source: 'google-satellite', minzoom: 0, maxzoom: 22, layout: { visibility: 'visible' } }
                 ]
             },
             center: [120.6015, 23.5937],
@@ -298,7 +298,7 @@
         });
 
         // --- 圖層切換 ---
-        let currentMapStyle = 'topo';
+        let currentMapStyle = 'satellite';
         const styles = ['topo', 'standard', 'satellite'];
         const styleNames = { topo: '地形', standard: '標準', satellite: '衛星' };
 
@@ -328,8 +328,9 @@
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
+                clip: false, // 允許標籤超出內部邊界時不被強制裁切
                 layout: {
-                    padding: { right: 20 } // 解決右邊的數字超出邊界被切掉的問題
+                    padding: { left: 5, right: 25, top: 5, bottom: 5 } // 增加左右與上下的安全距離
                 },
                 interaction: {
                     mode: 'index', // 讓游標只要對齊垂直 X 軸就能觸發，不用精準指在線上
@@ -357,11 +358,29 @@
                     }
                 },
                 scales: {
-                    x: { type: 'linear', position: 'bottom', title: { display: false }, ticks: { color: '#6b725c' }, grid: { display: false } },
+                    x: { 
+                        type: 'linear', 
+                        position: 'bottom', 
+                        title: { display: false }, 
+                        // 加入 maxRotation: 0 與 align: 'inner' 強制頭尾數字向內對齊不跑出去
+                        ticks: { color: '#6b725c', maxRotation: 0, align: 'inner' }, 
+                        grid: { display: false } 
+                    },
                     y: { title: { display: false }, ticks: { color: '#6b725c' }, grid: { color: 'rgba(107, 114, 92, 0.1)' } }
                 },
                 plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(62, 68, 51, 0.9)', padding: 10, cornerRadius: 10 } }
             }
+        });
+
+        // 確保滑鼠或手指離開圖表時，藍色連動標記會確實消失
+        const chartCanvas = document.getElementById('elevationChart');
+        chartCanvas.addEventListener('mouseout', () => {
+            if (chartHoverMarker && chartHoverMarker.getMap()) chartHoverMarker.remove();
+        });
+        chartCanvas.addEventListener('touchend', () => {
+            setTimeout(() => {
+                if (chartHoverMarker && chartHoverMarker.getMap()) chartHoverMarker.remove();
+            }, 100);
         });
 
         let chartVisible = false;
