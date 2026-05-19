@@ -18,8 +18,8 @@
     <!-- 引入 Chart.js 用於繪製高度表 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- 引入 Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- 引入 Lucide Icons (更換為更穩定的 jsDelivr CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
 
     <style>
         body, html {
@@ -171,13 +171,35 @@
     <div class="ui-layer absolute bottom-28 left-0 right-0 px-4 pointer-events-none flex justify-center">
         <div id="chart-panel" class="w-full max-w-sm bg-[#f0ece1]/95 backdrop-blur-xl rounded-[2rem] p-4 transform translate-y-[150%] opacity-0 transition-all duration-500 pointer-events-auto border border-white/60 shadow-2xl">
             <div class="flex justify-between items-center mb-2 px-2">
-                <span class="text-xs font-bold text-[#6b725c] uppercase tracking-wider">高度變化 Elevation</span>
+                <span class="text-xs font-bold text-[#6b725c] uppercase tracking-wider">路線數據與高度</span>
                 <button onclick="toggleChart()" class="text-[#6b725c] hover:text-[#e27653] bg-white/50 rounded-full p-1 border border-white/50">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
-            <div class="h-28 w-full">
-                <canvas id="elevationChart"></canvas>
+            
+            <div class="flex gap-3 h-28 w-full">
+                <!-- 左側數據統計 -->
+                <div class="flex flex-col justify-around bg-white/60 rounded-xl p-2 min-w-[70px] shrink-0 border border-white/50 shadow-sm">
+                    <div class="flex flex-col items-center" title="總距離">
+                        <i data-lucide="route" class="w-3 h-3 text-gray-500 mb-0.5"></i>
+                        <span id="stat-dist" class="text-xs font-black text-gray-800">--</span>
+                        <span class="text-[9px] text-gray-500">km</span>
+                    </div>
+                    <div class="flex flex-col items-center" title="總爬升">
+                        <i data-lucide="trending-up" class="w-3 h-3 text-green-600 mb-0.5"></i>
+                        <span id="stat-asc" class="text-xs font-black text-green-700">--</span>
+                        <span class="text-[9px] text-gray-500">m</span>
+                    </div>
+                    <div class="flex flex-col items-center" title="總下降">
+                        <i data-lucide="trending-down" class="w-3 h-3 text-red-500 mb-0.5"></i>
+                        <span id="stat-desc" class="text-xs font-black text-red-600">--</span>
+                        <span class="text-[9px] text-gray-500">m</span>
+                    </div>
+                </div>
+                <!-- 右側折線圖 -->
+                <div class="flex-grow w-full relative">
+                    <canvas id="elevationChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -217,8 +239,6 @@
     </div>
 
     <script>
-        lucide.createIcons();
-
         // --- 全域與專案狀態管理 ---
         const urlParams = new URLSearchParams(window.location.search);
         const isViewOnly = urlParams.get('view') === '1';
@@ -324,7 +344,7 @@
             type: 'line',
             data: {
                 datasets: [
-                    { label: '路線高度', data: [], borderColor: '#5c7042', backgroundColor: 'rgba(92, 112, 66, 0.15)', fill: true, pointRadius: 0, borderWidth: 3, tension: 0.3 },
+                    { label: '路線高度', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.3)', fill: true, pointRadius: 0, borderWidth: 2, tension: 0.1 },
                     { label: '目前位置', data: [], pointBackgroundColor: '#e27653', pointBorderColor: '#ffffff', pointBorderWidth: 2, pointRadius: 6, showLine: false }
                 ]
             },
@@ -362,6 +382,27 @@
             }
         }
 
+        // 更新左側統計數據 UI 的函式
+        function updateStatsUI(routePoints) {
+            if (!routePoints || routePoints.length === 0) {
+                document.getElementById('stat-dist').textContent = '--';
+                document.getElementById('stat-asc').textContent = '--';
+                document.getElementById('stat-desc').textContent = '--';
+                return;
+            }
+            let asc = 0; let desc = 0;
+            for (let i = 1; i < routePoints.length; i++) {
+                const diff = routePoints[i].ele - routePoints[i-1].ele;
+                if (diff > 0) asc += diff;
+                else if (diff < 0) desc += Math.abs(diff);
+            }
+            const dist = routePoints[routePoints.length - 1].dist;
+            
+            document.getElementById('stat-dist').textContent = dist.toFixed(2);
+            document.getElementById('stat-asc').textContent = Math.round(asc);
+            document.getElementById('stat-desc').textContent = Math.round(desc);
+        }
+
         function loadProject(id) {
             currentProjectId = id;
             saveToLocal();
@@ -378,7 +419,8 @@
                 if (map.getSource('route')) map.getSource('route').setData(geojson);
                 else {
                     map.addSource('route', { type: 'geojson', data: geojson });
-                    map.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#5c7042', 'line-width': 6, 'line-opacity': 0.9 } });
+                    // 將路線改為亮眼的橘黃色 (#f59e0b)
+                    map.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#f59e0b', 'line-width': 6, 'line-opacity': 0.9 } });
                 }
                 
                 const bounds = coords.reduce((b, coord) => b.extend(coord), new maplibregl.LngLatBounds(coords[0], coords[0]));
@@ -386,6 +428,8 @@
 
                 eleChart.data.datasets[0].data = proj.routePoints.map(p => ({ x: p.dist, y: p.ele }));
                 eleChart.update();
+                
+                updateStatsUI(proj.routePoints); // 計算並顯示數據
                 
                 document.getElementById('chart-panel').classList.remove('translate-y-[150%]', 'opacity-0');
                 chartVisible = true;
@@ -521,78 +565,78 @@
 
             popup.setDOMContent(showViewMode());
             marker.setPopup(popup);
-
-            // 拖曳結束更新座標
-            if (!isViewOnly) {
-                marker.on('dragend', () => {
-                    const lngLat = marker.getLngLat();
-                    mData.lat = lngLat.lat;
-                    mData.lng = lngLat.lng;
-                    const index = projects[currentProjectId].markers.findIndex(m => m.id === mData.id);
-                    if (index !== -1) projects[currentProjectId].markers[index] = mData;
-                    saveToLocal();
-                });
-            }
-
-            routeMarkers.push(marker);
-        }
-
-        // --- GPX/KML 解析邏輯 ---
-        function parseGPXText(gpxData) {
-            const xmlDoc = new DOMParser().parseFromString(gpxData, "text/xml");
-            const pts = Array.from(xmlDoc.getElementsByTagName("trkpt"));
-            if (pts.length === 0) pts.push(...Array.from(xmlDoc.getElementsByTagName("rtept")));
-
-            const parsedPts = pts.map(pt => ({
-                lat: parseFloat(pt.getAttribute("lat")),
-                lng: parseFloat(pt.getAttribute("lon")),
-                ele: pt.getElementsByTagName("ele")[0] ? parseFloat(pt.getElementsByTagName("ele")[0].textContent) : 0
-            }));
-            const nameNode = xmlDoc.getElementsByTagName("name")[0];
-            if (parsedPts.length > 0) saveImportedData(parsedPts, nameNode ? nameNode.textContent : "匯入的 GPX");
-            else alert('無效的軌跡檔案');
-        }
-
-        // 解析 KML 字串
+        // 解析 KML 字串 (強化容錯率)
         function parseKMLText(kmlText) {
-            const xmlDoc = new DOMParser().parseFromString(kmlText, "text/xml");
-            const lineStrings = xmlDoc.getElementsByTagName("LineString");
-            const parsedPts = [];
+            try {
+                const xmlDoc = new DOMParser().parseFromString(kmlText, "text/xml");
+                if (xmlDoc.getElementsByTagName("parsererror").length > 0) throw new Error("XML 解析錯誤");
 
-            for (let i = 0; i < lineStrings.length; i++) {
-                const coordNode = lineStrings[i].getElementsByTagName("coordinates")[0];
-                if (!coordNode) continue;
-                coordNode.textContent.trim().split(/\s+/).forEach(pair => {
-                    const coords = pair.split(',');
-                    if (coords.length >= 2) parsedPts.push({ lng: parseFloat(coords[0]), lat: parseFloat(coords[1]), ele: coords[2] ? parseFloat(coords[2]) : 0 });
-                });
+                const lineStrings = xmlDoc.getElementsByTagName("LineString");
+                const parsedPts = [];
+
+                for (let i = 0; i < lineStrings.length; i++) {
+                    const coordNode = lineStrings[i].getElementsByTagName("coordinates")[0];
+                    if (!coordNode) continue;
+                    
+                    // 以空白字元分割，確保不會被換行符號干擾
+                    const coordsArray = coordNode.textContent.trim().split(/\s+/);
+                    coordsArray.forEach(pair => {
+                        const coords = pair.split(',');
+                        if (coords.length >= 2) {
+                            const lng = parseFloat(coords[0]);
+                            const lat = parseFloat(coords[1]);
+                            const ele = coords.length >= 3 ? parseFloat(coords[2]) : 0;
+                            if (!isNaN(lat) && !isNaN(lng)) parsedPts.push({ lng, lat, ele });
+                        }
+                    });
+                }
+
+                const nameNode = xmlDoc.getElementsByTagName("name")[0];
+                if (parsedPts.length > 0) saveImportedData(parsedPts, nameNode ? nameNode.textContent : "匯入的 KML/KMZ");
+                else alert('無法解析此檔案的路線軌跡。請確認其包含軌跡資料。');
+            } catch (err) {
+                console.error("KML 解析異常:", err);
+                alert('檔案格式解析失敗，檔案可能損毀或格式不正確。');
             }
-
-            const nameNode = xmlDoc.getElementsByTagName("name")[0];
-            if (parsedPts.length > 0) saveImportedData(parsedPts, nameNode ? nameNode.textContent : "匯入的 KML/KMZ");
-            else alert('無法解析此檔案的路線軌跡');
         }
 
         async function processFile(file) {
             const name = file.name.toLowerCase();
-            const reader = new FileReader();
-
+            
             if (name.endsWith('.kmz')) {
+                const reader = new FileReader();
                 reader.onload = async (e) => {
                     try {
                         const zip = await JSZip.loadAsync(e.target.result);
-                        const kmlFile = Object.values(zip.files).find(f => f.name.toLowerCase().endsWith('.kml'));
-                        if (kmlFile) parseKMLText(await kmlFile.async('text'));
-                        else alert('KMZ 檔案中找不到 KML 路線資料。');
+                        // 尋找壓縮檔內的 .kml 檔案 (忽略大小寫)
+                        const kmlFilename = Object.keys(zip.files).find(f => f.toLowerCase().endsWith('.kml'));
+                        
+                        if (kmlFilename) {
+                            // 使用 async('string') 取代 'text' 確保編碼正確
+                            const kmlText = await zip.files[kmlFilename].async('string');
+                            parseKMLText(kmlText);
+                        } else {
+                            alert('KMZ 檔案中找不到 KML 路線資料。');
+                        }
                     } catch (err) {
-                        alert('無法解析 KMZ 檔案，檔案可能損毀。');
+                        console.warn('JSZip 解壓縮失敗，嘗試直接作為 KML 讀取...', err);
+                        // 安全備用方案：有些軟體匯出的 KMZ 其實只是改了副檔名的純 KML 檔
+                        const fallbackReader = new FileReader();
+                        fallbackReader.onload = (ev) => {
+                            const content = ev.target.result;
+                            if (content.includes('<?xml') || content.includes('<kml')) parseKMLText(content);
+                            else alert('無法解析 KMZ 檔案，檔案可能損毀或格式不支援。');
+                        };
+                        fallbackReader.readAsText(file);
                     }
                 };
                 reader.readAsArrayBuffer(file);
             } else if (name.endsWith('.kml')) {
+                const reader = new FileReader();
                 reader.onload = (e) => parseKMLText(e.target.result);
                 reader.readAsText(file);
             } else {
+                const reader = new FileReader();
                 reader.onload = (e) => parseGPXText(e.target.result);
                 reader.readAsText(file);
             }
@@ -772,13 +816,17 @@
             }
         }
 
-        // --- 7. 檢視模式控制 ---
+        // --- 7. 檢視模式控制 與 圖示初始化 ---
         window.addEventListener('DOMContentLoaded', () => {
+            // 確保網頁結構都載入完畢後，才繪製圖示 (解決預覽視窗圖示出不來的問題)
+            lucide.createIcons();
+            
             if (isViewOnly) {
                 const rightControls = document.getElementById('editor-controls-right');
                 if (rightControls) rightControls.style.display = 'none'; // 隱藏編輯與專案控制
             }
         });
+        
         function shareAppLink() {
             let shareUrl = window.location.origin + window.location.pathname + "?view=1";
             if (navigator.clipboard) navigator.clipboard.writeText(shareUrl).then(() => alert('已複製純檢視模式連結！'));
