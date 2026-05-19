@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -779,109 +780,99 @@
                 });
             }
 
-           <!-- ... (請保留所有開頭的 CSS 與 HTML 結構，直到 renderMarker 函數) ... -->
-<!-- (將以下函數完全替換掉舊有的 renderMarker 與 GPS 相關區塊) -->
-
-        let targetMarker = null; // 新增：用來存放當前的目標地標
-
-        function renderMarker(mData) {
-            const el = document.createElement('div');
-            el.className = 'custom-poi-marker';
-            el.style.backgroundColor = mData.color || '#e27653';
-            
-            const iconName = mData.icon || 'map-pin';
-            if (iconName === 'wc') el.innerHTML = `<span style="font-size: 11px; font-weight: 900; line-height: 1;">WC</span>`;
-            else if (iconName === 'P') el.innerHTML = `<span style="font-size: 13px; font-weight: 900; line-height: 1;">P</span>`;
-            else el.innerHTML = `<i data-lucide="${iconName}" class="w-4 h-4"></i>`;
-            
-            setTimeout(() => lucide.createIcons({ root: el }), 0);
-
-            const marker = new maplibregl.Marker({ element: el, draggable: !isViewOnly })
-                .setLngLat([mData.lng, mData.lat])
-                .addTo(map);
-            
-            const popup = new maplibregl.Popup({ offset: 15, closeButton: false });
-            
-            function showViewMode() {
-                const div = document.createElement('div');
-                div.className = 'p-1 min-w-[150px]';
-                let isTarget = targetMarker && targetMarker.id === mData.id;
-                
-                let html = `<b class="text-sm px-1 text-gray-800 block">${mData.name} ${isTarget ? '🎯' : ''}</b>`;
-                if(mData.desc) html += `<p class="text-[11px] text-gray-600 px-1 mt-1 whitespace-pre-wrap">${mData.desc}</p>`;
-                
-                html += `<div class="flex gap-2 mt-2 pt-2 border-t border-gray-200 px-1">
-                    <button class="text-xs ${isTarget ? 'text-gray-400' : 'text-blue-600'} font-bold hover:underline btn-target">${isTarget ? '已鎖定' : '設為目標'}</button>`;
-                
-                if (!isViewOnly) {
-                    html += `<button class="text-xs text-[#5c7042] font-bold hover:underline btn-edit">編輯</button>
-                             <button class="text-xs text-red-500 font-bold hover:underline btn-delete">刪除</button>`;
-                }
-                html += `</div>`;
-                div.innerHTML = html;
-
-                div.querySelector('.btn-target').onclick = () => {
-                    targetMarker = isTarget ? null : mData;
-                    popup.setDOMContent(showViewMode());
-                };
-
-                if (!isViewOnly) {
-                    div.querySelector('.btn-edit').onclick = () => popup.setDOMContent(showEditMode());
-                    div.querySelector('.btn-delete').onclick = () => {
-                        if (confirm(`確定要刪除地標「${mData.name}」嗎？`)) {
-                            if (targetMarker && targetMarker.id === mData.id) targetMarker = null;
-                            marker.remove();
-                            projects[currentProjectId].markers = projects[currentProjectId].markers.filter(m => m.id !== mData.id);
-                            saveToLocal();
-                        }
-                    };
-                }
-                return div;
-            }
-
-            function showEditMode() {
-                return buildMarkerEditorForm(mData, 
-                    (updatedData) => {
-                        const index = projects[currentProjectId].markers.findIndex(m => m.id === mData.id);
-                        if (index !== -1) {
-                            projects[currentProjectId].markers[index] = updatedData;
-                            saveToLocal();
-                            marker.remove();
-                            renderMarker(updatedData);
-                        }
-                    }, 
-                    () => popup.setDOMContent(showViewMode())
-                );
-            }
-
-            popup.setDOMContent(showViewMode());
-            marker.setPopup(popup);
             routeMarkers.push(marker);
         }
 
-        // --- 更新後的 GPS 定位邏輯 ---
-        function updatePosition(position) {
-            const lat = position.coords.latitude; const lng = position.coords.longitude;
-            let statusText = `精度: ${Math.round(position.coords.accuracy)}m`;
+        // --- GPX/KML 解析 ---
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; const dLat = (lat2-lat1)*Math.PI/180; const dLon = (lon2-lon1)*Math.PI/180;
+            const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
 
-            // 計算距離目標點距離
-            if (targetMarker) {
-                const d = getDistance(lat, lng, targetMarker.lat, targetMarker.lng);
-                statusText += ` | 距 ${targetMarker.name.slice(0,4)}: ${d < 1 ? Math.round(d*1000)+'m' : d.toFixed(2)+'km'}`;
+        // 優化：降採樣演算法，防止 LocalStorage 容量爆滿 & 圖表卡頓
+        function thinRouteData(points, maxPoints = 800) {
+            if (points.length <= maxPoints) return points;
+            const step = Math.max(1, Math.floor(points.length / maxPoints));
+            return points.filter((_, index) => index % step === 0 || index === points.length - 1);
+        }
+
+        function saveImportedData(parsedPts, routeName, importedMarkers = []) {
+            let totalDist = 0; let lastPoint = null;
+            let asc = 0; let desc = 0;
+            
+            // 先計算原始的精確爬升與距離
+            const routeData = parsedPts.map(pt => {
+                if (lastPoint) {
+                    totalDist += getDistance(lastPoint.lat, lastPoint.lng, pt.lat, pt.lng);
+                    const diff = pt.ele - lastPoint.ele;
+                    if (diff > 0) asc += diff;
+                    else if (diff < 0) desc += Math.abs(diff);
+                }
+                lastPoint = pt;
+                return { lat: pt.lat, lng: pt.lng, ele: pt.ele, dist: totalDist };
+            });
+
+            // 對資料進行降採樣以利儲存與渲染
+            const thinnedData = thinRouteData(routeData);
+
+            if (parsedPts.length > 0) {
+                projects[currentProjectId].routePoints = thinnedData;
+                projects[currentProjectId].totalAsc = asc;
+                projects[currentProjectId].totalDesc = desc;
             }
 
-            gpsStatus.textContent = statusText;
-            gpsStatus.classList.add('text-[#e27653]');
+            // 合併匯入的新地標
+            if (importedMarkers && importedMarkers.length > 0) {
+                if (!projects[currentProjectId].markers) projects[currentProjectId].markers = [];
+                projects[currentProjectId].markers = projects[currentProjectId].markers.concat(importedMarkers);
+            }
 
-            if (!userMarker) {
-                const el = document.createElement('div'); el.className = 'user-location-marker pulse';
-                userMarker = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
-                map.flyTo({ center: [lng, lat], zoom: 16 });
+            if (routeName && projects[currentProjectId].name === '預設專案') {
+                projects[currentProjectId].name = routeName;
+            }
+            saveToLocal();
+            loadProject(currentProjectId);
+            hideLoading(); // 載入完成，隱藏動畫
+        }
+
+        function parseGPXText(gpxData) {
+            const xmlDoc = new DOMParser().parseFromString(gpxData, "text/xml");
+            const pts = Array.from(xmlDoc.getElementsByTagName("trkpt"));
+            if (pts.length === 0) pts.push(...Array.from(xmlDoc.getElementsByTagName("rtept")));
+
+            const parsedPts = pts.map(pt => ({
+                lat: parseFloat(pt.getAttribute("lat")),
+                lng: parseFloat(pt.getAttribute("lon")),
+                ele: pt.getElementsByTagName("ele")[0] ? parseFloat(pt.getElementsByTagName("ele")[0].textContent) : 0
+            }));
+            
+            // 處理 GPX 地標 (Waypoint)
+            const wpts = Array.from(xmlDoc.getElementsByTagName("wpt"));
+            const importedMarkers = wpts.map((pt, i) => {
+                const lat = parseFloat(pt.getAttribute("lat"));
+                const lng = parseFloat(pt.getAttribute("lon"));
+                const nameNode = pt.getElementsByTagName("name")[0];
+                const descNode = pt.getElementsByTagName("desc")[0];
+                return {
+                    id: 'poi_' + Date.now() + '_wpt_' + i,
+                    lat: lat,
+                    lng: lng,
+                    name: nameNode ? nameNode.textContent.trim() : "未命名地標",
+                    desc: descNode ? descNode.textContent.trim() : "",
+                    color: '#eab308', // 給匯入地標預設黃色以做區別
+                    icon: 'map-pin'
+                };
+            });
+
+            const nameNode = xmlDoc.getElementsByTagName("name")[0];
+            if (parsedPts.length > 0 || importedMarkers.length > 0) {
+                saveImportedData(parsedPts, nameNode ? nameNode.textContent : "匯入的 GPX", importedMarkers);
             } else {
-                userMarker.setLngLat([lng, lat]);
+                alert('無效的軌跡檔案');
+                hideLoading();
             }
         }
-<!-- ... (其餘程式碼保持不變) ... -->
 
         function parseKMLText(kmlText) {
             try {
