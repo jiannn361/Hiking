@@ -18,6 +18,9 @@
     <!-- 引入 Chart.js (移除 defer) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <!-- 引入 LZ-String (用於將整條路線高強度壓縮進網址中) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+
     <!-- 引入 Lucide Icons -->
     <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
 
@@ -323,6 +326,17 @@
 
         // --- Chart.js 高度表初始化與互動 ---
         let chartHoverMarker = null; // 宣告圖表連動的地圖標記
+        
+        // 效能優化：只建立一次 DOM 元素，後續只切換顯示/隱藏，避免重複增刪 DOM 導致地圖卡死
+        function initHoverMarker() {
+            if (!chartHoverMarker) {
+                const el = document.createElement('div');
+                el.className = 'w-4 h-4 bg-[#3b82f6] border-2 border-white rounded-full shadow-md pointer-events-none';
+                el.style.display = 'none';
+                chartHoverMarker = new maplibregl.Marker({ element: el }).setLngLat([0, 0]).addTo(map);
+            }
+        }
+
         const ctx = document.getElementById('elevationChart').getContext('2d');
         let eleChart = new Chart(ctx, {
             type: 'line',
@@ -349,16 +363,12 @@
                         const proj = projects[currentProjectId];
                         if (proj && proj.routePoints && proj.routePoints[index]) {
                             const pt = proj.routePoints[index];
-                            if (!chartHoverMarker) {
-                                const el = document.createElement('div');
-                                // 優化：移除 transition 動畫，讓藍點移動瞬間跟手、不再延遲亂飄
-                                el.className = 'w-4 h-4 bg-[#3b82f6] border-2 border-white rounded-full shadow-md pointer-events-none';
-                                chartHoverMarker = new maplibregl.Marker({ element: el }).setLngLat([pt.lng, pt.lat]).addTo(map);
-                            } else {
-                                chartHoverMarker.setLngLat([pt.lng, pt.lat]);
-                                if (!chartHoverMarker.getMap()) chartHoverMarker.addTo(map);
-                            }
+                            initHoverMarker();
+                            chartHoverMarker.setLngLat([pt.lng, pt.lat]);
+                            chartHoverMarker.getElement().style.display = 'block';
                         }
+                    } else {
+                        if (chartHoverMarker) chartHoverMarker.getElement().style.display = 'none';
                     }
                 },
                 scales: {
@@ -376,17 +386,23 @@
             }
         });
 
-        // --- 提取共用的清除連動游標函數 ---
+        // --- 提取共用的清除連動游標函數 (效能優化防當機版) ---
         function clearSyncHover() {
-            if (chartHoverMarker && chartHoverMarker.getMap()) chartHoverMarker.remove();
+            if (chartHoverMarker && chartHoverMarker.getElement().style.display !== 'none') {
+                chartHoverMarker.getElement().style.display = 'none';
+            }
             if (eleChart) {
-                eleChart.setActiveElements([]);
-                eleChart.tooltip.setActiveElements([], { x: 0, y: 0 });
-                eleChart.update();
+                const active = eleChart.getActiveElements();
+                // 【關鍵修復】只有在圖表「真的有」選取狀態時，才進行清除。並且加上 'none' 關閉動畫，徹底避免拖曳當機
+                if (active && active.length > 0) {
+                    eleChart.setActiveElements([]);
+                    eleChart.tooltip.setActiveElements([], { x: 0, y: 0 });
+                    eleChart.update('none'); 
+                }
             }
         }
 
-        // 確保滑鼠或手指離開圖表時，藍色連動標記會確實消失 (優化版)
+        // 確保滑鼠或手指離開圖表時，藍色連動標記會確實消失
         const chartPanelElem = document.getElementById('chart-panel');
         
         // 桌面版：改用 mouseleave 監聽整個面板
@@ -437,20 +453,15 @@
 
             // 更新地圖藍點
             const pt = proj.routePoints[closestIdx];
-            if (!chartHoverMarker) {
-                const el = document.createElement('div');
-                el.className = 'w-4 h-4 bg-[#3b82f6] border-2 border-white rounded-full shadow-md pointer-events-none';
-                chartHoverMarker = new maplibregl.Marker({ element: el }).setLngLat([pt.lng, pt.lat]).addTo(map);
-            } else {
-                chartHoverMarker.setLngLat([pt.lng, pt.lat]);
-                if (!chartHoverMarker.getMap()) chartHoverMarker.addTo(map);
-            }
+            initHoverMarker();
+            chartHoverMarker.setLngLat([pt.lng, pt.lat]);
+            chartHoverMarker.getElement().style.display = 'block';
 
             // 更新圖表游標
             if (eleChart) {
                 eleChart.setActiveElements([{ datasetIndex: 0, index: closestIdx }]);
                 eleChart.tooltip.setActiveElements([{ datasetIndex: 0, index: closestIdx }], { x: 0, y: 0 });
-                eleChart.update();
+                eleChart.update('none'); // 【關鍵修復】加入 'none' 避免高頻觸發動畫導致當機
             }
         });
 
@@ -478,7 +489,63 @@
         // --- 專案載入與 URL 自動獲取 ---
         map.on('load', () => {
             const routeUrl = urlParams.get('route');
-            if (routeUrl) {
+            const shareData = urlParams.get('s'); // 獲取網址中可能包含的「壓縮路線資料」
+
+            if (shareData) {
+                // 如果網址帶有 ?s=...，代表這是壓縮好的專屬連結，直接解壓縮並顯示
+                showLoading();
+                setTimeout(() => {
+                    try {
+                        const jsonString = LZString.decompressFromEncodedURIComponent(shareData);
+                        const data = JSON.parse(jsonString);
+                        
+                        const newId = 'proj_shared_' + Date.now();
+                        const newProj = { id: newId, name: data.n || '分享的路線', routePoints: [], markers: [] };
+
+                        let totalDist = 0; let lastPoint = null;
+                        let asc = 0; let desc = 0;
+
+                        // 重建軌跡資料
+                        if (data.p) {
+                            data.p.forEach(ptArr => {
+                                const pt = { lng: ptArr[0], lat: ptArr[1], ele: ptArr[2] };
+                                if (lastPoint) {
+                                    totalDist += getDistance(lastPoint.lat, lastPoint.lng, pt.lat, pt.lng);
+                                    const diff = pt.ele - lastPoint.ele;
+                                    if (diff > 0) asc += diff;
+                                    else if (diff < 0) desc += Math.abs(diff);
+                                }
+                                pt.dist = totalDist;
+                                newProj.routePoints.push(pt);
+                                lastPoint = pt;
+                            });
+                            newProj.totalAsc = asc;
+                            newProj.totalDesc = desc;
+                        }
+
+                        // 重建自訂地標資料
+                        if (data.m) {
+                            data.m.forEach((m, i) => {
+                                newProj.markers.push({
+                                    id: 'poi_shared_' + i, name: m.n, desc: m.d,
+                                    lng: m.l[0], lat: m.l[1], color: m.c, icon: m.i
+                                });
+                            });
+                        }
+
+                        projects[newId] = newProj;
+                        if (!isViewOnly) saveToLocal(); 
+                        
+                        hideLoading();
+                        loadProject(newId);
+                    } catch (e) {
+                        console.error("解析分享連結失敗:", e);
+                        alert("分享連結無效或已損毀！");
+                        hideLoading();
+                        loadProject(currentProjectId);
+                    }
+                }, 100);
+            } else if (routeUrl) {
                 // 如果網址帶有 ?route=...，則自動下載該檔案並顯示
                 showLoading();
                 fetch(routeUrl)
@@ -1160,9 +1227,50 @@
             }
         });
         
+        // 升級版分享按鈕：將整座山的資料壓縮成一串網址！
         function shareAppLink() {
-            let shareUrl = window.location.origin + window.location.pathname + "?view=1";
-            if (navigator.clipboard) navigator.clipboard.writeText(shareUrl).then(() => alert('已複製純檢視模式連結！'));
+            const proj = projects[currentProjectId];
+            if (!proj || (!proj.routePoints.length && !proj.markers.length)) {
+                alert('目前沒有路線或地標可以分享！');
+                return;
+            }
+            
+            showLoading();
+            setTimeout(() => {
+                try {
+                    // 1. 將資料精簡化 (捨去過長的小數點，大幅縮小體積)
+                    const compactData = {
+                        n: proj.name,
+                        p: proj.routePoints.map(pt => [Math.round(pt.lng*100000)/100000, Math.round(pt.lat*100000)/100000, Math.round(pt.ele)]),
+                        m: proj.markers.map(m => ({
+                            n: m.name, d: m.desc, 
+                            l: [Math.round(m.lng*100000)/100000, Math.round(m.lat*100000)/100000], 
+                            c: m.color, i: m.icon
+                        }))
+                    };
+                    
+                    // 2. 轉為字串並進行高強度壓縮 (使用 LZString)
+                    const jsonString = JSON.stringify(compactData);
+                    const compressed = LZString.compressToEncodedURIComponent(jsonString);
+                    
+                    // 3. 組合出夾帶壓縮資料的分享網址 (帶有 ?s=... 以及預設開啟純檢視 ?view=1)
+                    const shareUrl = window.location.origin + window.location.pathname + "?s=" + compressed + "&view=1";
+                    
+                    // 4. 使用相容性最高的剪貼簿複製法
+                    const tempInput = document.createElement('textarea');
+                    tempInput.value = shareUrl;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                    
+                    alert('✅ 已成功將路線打包並產生專屬連結！\n\n網址已自動複製，您可以直接「貼上」到您的導覽 App 按鈕網址設定中。');
+                } catch(e) {
+                    console.error(e);
+                    alert('產生連結失敗，可能路線資料量過大。');
+                }
+                hideLoading();
+            }, 100);
         }
     </script>
 </body>
