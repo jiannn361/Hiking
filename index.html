@@ -69,7 +69,7 @@
             100% { transform: scale(1.2, 1.2); opacity: 0; }
         }
 
-        /* 自訂地標的樣式（新增呼吸光圈與柔和投影，確保在任何複雜地圖底圖下皆清晰可辨） */
+        /* 自訂地標的樣式（修復了 transform 造成的亂飛 Bug） */
         .custom-poi-marker {
             width: 28px;
             height: 28px;
@@ -81,12 +81,13 @@
             align-items: center;
             justify-content: center;
             color: white;
+            /* 拿掉 transform 的變化，僅使用 box-shadow 製造發光效果，避免覆蓋經緯度定位 */
             animation: marker-glow 2s infinite alternate ease-in-out;
         }
 
         @keyframes marker-glow {
-            0% { box-shadow: 0 0 6px rgba(255, 255, 255, 0.6), 0 2px 4px rgba(0, 0, 0, 0.3); transform: scale(1); }
-            100% { box-shadow: 0 0 14px rgba(255, 255, 255, 1), 0 4px 10px rgba(0, 0, 0, 0.5); transform: scale(1.06); }
+            0% { box-shadow: 0 0 6px rgba(255, 255, 255, 0.6), 0 2px 4px rgba(0, 0, 0, 0.3); }
+            100% { box-shadow: 0 0 14px rgba(255, 255, 255, 1), 0 4px 10px rgba(0, 0, 0, 0.5); }
         }
 
         input[type="file"] {
@@ -146,7 +147,7 @@
 
         <button id="btn-layer" onclick="toggleMapStyle()" class="bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-2.5 hover:bg-white active:scale-95 transition text-[#4a503d] pointer-events-auto border border-white/60 shadow-md flex flex-col items-center mt-1 w-[52px]">
             <i data-lucide="layers" class="w-5 h-5"></i>
-            <span id="layer-name" class="text-[8px] font-bold mt-0.5 whitespace-nowrap truncate w-full text-center">衛星+標籤</span>
+            <span id="layer-name" class="text-[8px] font-bold mt-0.5 whitespace-nowrap truncate w-full text-center">純衛星(乾淨)</span>
         </button>
 
         <div id="editor-controls-right" class="flex flex-col gap-2.5 pointer-events-none mt-1">
@@ -323,8 +324,8 @@
                 layers: [
                     { id: 'topo-layer', type: 'raster', source: 'google-topo', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } },
                     { id: 'standard-layer', type: 'raster', source: 'google-standard', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } },
-                    { id: 'satellite-layer', type: 'raster', source: 'google-satellite', minzoom: 0, maxzoom: 22, layout: { visibility: 'visible' } },
-                    { id: 'satellite-pure-layer', type: 'raster', source: 'google-satellite-pure', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } }
+                    { id: 'satellite-layer', type: 'raster', source: 'google-satellite', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } },
+                    { id: 'satellite-pure-layer', type: 'raster', source: 'google-satellite-pure', minzoom: 0, maxzoom: 22, layout: { visibility: 'visible' } } // 預設開啟純衛星
                 ]
             },
             center: [120.6015, 23.5937],
@@ -332,8 +333,8 @@
             attributionControl: true
         });
 
-        // --- 圖層切換 (新增純衛星模式選項) ---
-        let currentMapStyle = 'satellite';
+        // --- 圖層切換 (修改預設為純衛星) ---
+        let currentMapStyle = 'satellite-pure';
         const styles = ['topo', 'standard', 'satellite', 'satellite-pure'];
         const styleNames = { topo: '地形', standard: '標準', satellite: '衛星+標籤', 'satellite-pure': '純衛星(乾淨)' };
 
