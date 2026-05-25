@@ -185,12 +185,17 @@
             </div>
             
             <div class="flex gap-3 h-36 w-full">
-                <!-- 左側數據統計 -->
-                <div class="flex flex-col justify-around bg-white/60 rounded-xl p-2 min-w-[70px] shrink-0 border border-white/50 shadow-sm">
+                <!-- 左側數據統計 (修改為 2x2 網格以容納時間資訊) -->
+                <div class="grid grid-cols-2 grid-rows-2 gap-x-3 gap-y-2 content-center items-center bg-white/60 rounded-xl p-2 min-w-[110px] shrink-0 border border-white/50 shadow-sm">
                     <div class="flex flex-col items-center" title="總距離">
                         <i data-lucide="route" class="w-3 h-3 text-gray-500 mb-0.5"></i>
                         <span id="stat-dist" class="text-xs font-black text-gray-800">--</span>
                         <span class="text-[9px] text-gray-500">km</span>
+                    </div>
+                    <div class="flex flex-col items-center" title="預估時間 (依據Naismith法則)">
+                        <i data-lucide="clock" class="w-3 h-3 text-blue-500 mb-0.5"></i>
+                        <span id="stat-time" class="text-xs font-black text-gray-800">--</span>
+                        <span class="text-[9px] text-gray-500">時間</span>
                     </div>
                     <div class="flex flex-col items-center" title="總爬升">
                         <i data-lucide="trending-up" class="w-3 h-3 text-green-600 mb-0.5"></i>
@@ -612,12 +617,29 @@
                 document.getElementById('stat-dist').textContent = '--';
                 document.getElementById('stat-asc').textContent = '--';
                 document.getElementById('stat-desc').textContent = '--';
+                document.getElementById('stat-time').textContent = '--';
                 return;
             }
             const dist = routePoints[routePoints.length - 1].dist;
             document.getElementById('stat-dist').textContent = dist.toFixed(2);
-            document.getElementById('stat-asc').textContent = Math.round(originAsc || 0);
+            
+            const asc = Math.round(originAsc || 0);
+            document.getElementById('stat-asc').textContent = asc;
             document.getElementById('stat-desc').textContent = Math.round(originDesc || 0);
+
+            // 預估時間計算 (Naismith's Rule: 距離每 1km=20分, 爬升每 100m=10分)
+            const totalMins = Math.round((dist * 20) + (asc / 10));
+            let timeStr = '--';
+            if (totalMins > 0) {
+                if (totalMins < 60) {
+                    timeStr = `${totalMins}m`; // 例: 45m
+                } else {
+                    const h = Math.floor(totalMins / 60);
+                    const m = totalMins % 60;
+                    timeStr = `${h}h${m}m`; // 例: 2h15m
+                }
+            }
+            document.getElementById('stat-time').textContent = timeStr;
         }
 
         function loadProject(id) {
