@@ -69,18 +69,24 @@
             100% { transform: scale(1.2, 1.2); opacity: 0; }
         }
 
-        /* 自訂地標的樣式 */
+        /* 自訂地標的樣式（新增呼吸光圈與柔和投影，確保在任何複雜地圖底圖下皆清晰可辨） */
         .custom-poi-marker {
             width: 28px;
             height: 28px;
             border-radius: 50%;
             border: 2px solid white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
+            animation: marker-glow 2s infinite alternate ease-in-out;
+        }
+
+        @keyframes marker-glow {
+            0% { box-shadow: 0 0 6px rgba(255, 255, 255, 0.6), 0 2px 4px rgba(0, 0, 0, 0.3); transform: scale(1); }
+            100% { box-shadow: 0 0 14px rgba(255, 255, 255, 1), 0 4px 10px rgba(0, 0, 0, 0.5); transform: scale(1.06); }
         }
 
         input[type="file"] {
@@ -138,9 +144,9 @@
             </button>
         </div>
 
-        <button id="btn-layer" onclick="toggleMapStyle()" class="bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-2.5 hover:bg-white active:scale-95 transition text-[#4a503d] pointer-events-auto border border-white/60 shadow-md flex flex-col items-center mt-1">
+        <button id="btn-layer" onclick="toggleMapStyle()" class="bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-2.5 hover:bg-white active:scale-95 transition text-[#4a503d] pointer-events-auto border border-white/60 shadow-md flex flex-col items-center mt-1 w-[52px]">
             <i data-lucide="layers" class="w-5 h-5"></i>
-            <span id="layer-name" class="text-[8px] font-bold mt-0.5">衛星</span>
+            <span id="layer-name" class="text-[8px] font-bold mt-0.5 whitespace-nowrap truncate w-full text-center">衛星+標籤</span>
         </button>
 
         <div id="editor-controls-right" class="flex flex-col gap-2.5 pointer-events-none mt-1">
@@ -279,7 +285,7 @@
             }
         }
 
-        // --- 1. MapLibre 地圖初始化 (全面改用 Google 圖資) ---
+        // --- 1. MapLibre 地圖初始化 (全面改用 Google 圖資，新增「純衛星」模式隔絕干擾) ---
         const map = new maplibregl.Map({
             container: 'map',
             style: {
@@ -299,10 +305,17 @@
                         tileSize: 256, 
                         attribution: '&copy; Google' 
                     },
-                    // Google 衛星空照圖 (含街道標籤混合)
+                    // Google 衛星空照圖 (含街道、商家、標籤混合)
                     'google-satellite': { 
                         type: 'raster', 
                         tiles: ['https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}&scale=2&hl=zh-TW'], 
+                        tileSize: 256, 
+                        attribution: '&copy; Google' 
+                    },
+                    // Google 純衛星圖 (【完全無標籤、無路名、無景點】！超乾淨，專門烘托您的步道地標)
+                    'google-satellite-pure': { 
+                        type: 'raster', 
+                        tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}&scale=2&hl=zh-TW'], 
                         tileSize: 256, 
                         attribution: '&copy; Google' 
                     }
@@ -310,7 +323,8 @@
                 layers: [
                     { id: 'topo-layer', type: 'raster', source: 'google-topo', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } },
                     { id: 'standard-layer', type: 'raster', source: 'google-standard', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } },
-                    { id: 'satellite-layer', type: 'raster', source: 'google-satellite', minzoom: 0, maxzoom: 22, layout: { visibility: 'visible' } }
+                    { id: 'satellite-layer', type: 'raster', source: 'google-satellite', minzoom: 0, maxzoom: 22, layout: { visibility: 'visible' } },
+                    { id: 'satellite-pure-layer', type: 'raster', source: 'google-satellite-pure', minzoom: 0, maxzoom: 22, layout: { visibility: 'none' } }
                 ]
             },
             center: [120.6015, 23.5937],
@@ -318,10 +332,10 @@
             attributionControl: true
         });
 
-        // --- 圖層切換 ---
+        // --- 圖層切換 (新增純衛星模式選項) ---
         let currentMapStyle = 'satellite';
-        const styles = ['topo', 'standard', 'satellite'];
-        const styleNames = { topo: '地形', standard: '標準', satellite: '衛星' };
+        const styles = ['topo', 'standard', 'satellite', 'satellite-pure'];
+        const styleNames = { topo: '地形', standard: '標準', satellite: '衛星+標籤', 'satellite-pure': '純衛星(乾淨)' };
 
         function toggleMapStyle() {
             let idx = (styles.indexOf(currentMapStyle) + 1) % styles.length;
@@ -329,6 +343,7 @@
             map.setLayoutProperty('topo-layer', 'visibility', currentMapStyle === 'topo' ? 'visible' : 'none');
             map.setLayoutProperty('standard-layer', 'visibility', currentMapStyle === 'standard' ? 'visible' : 'none');
             map.setLayoutProperty('satellite-layer', 'visibility', currentMapStyle === 'satellite' ? 'visible' : 'none');
+            map.setLayoutProperty('satellite-pure-layer', 'visibility', currentMapStyle === 'satellite-pure' ? 'visible' : 'none');
             document.getElementById('layer-name').textContent = styleNames[currentMapStyle];
         }
 
@@ -481,7 +496,7 @@
             if(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
         }
 
-        // --- 跨裝置自動讀取與 URL 引數功能 ---
+        // --- 跨裝置自動讀取與 URL 引數功能 (修復專案重複生成的 Bug) ---
         map.on('load', () => {
             const routeUrl = urlParams.get('route');
             const shareData = urlParams.get('s');
@@ -493,8 +508,23 @@
                         const jsonString = LZString.decompressFromEncodedURIComponent(shareData);
                         const data = JSON.parse(jsonString);
                         
-                        const newId = 'proj_shared_' + Date.now();
-                        const newProj = { id: newId, name: data.n || '分享的路線', routePoints: [], markers: [] };
+                        // 【Bug 修復關鍵】：根據分享內容建立穩定的雜湊值 (Hash)，防止每次打開連結都無限複製新專案
+                        let hash = 0;
+                        for (let i = 0; i < shareData.length; i++) {
+                            const chr = shareData.charCodeAt(i);
+                            hash = ((hash << 5) - hash) + chr;
+                            hash |= 0; // 轉為 32 位元整數
+                        }
+                        const stableId = 'proj_shared_' + Math.abs(hash);
+
+                        // 如果本地已經讀取、建立過此分享專案，直接加載它，不建立多餘重複的專案！
+                        if (projects[stableId]) {
+                            hideLoading();
+                            loadProject(stableId);
+                            return;
+                        }
+
+                        const newProj = { id: stableId, name: data.n || '分享的路線', routePoints: [], markers: [] };
 
                         let totalDist = 0; let lastPoint = null;
                         let asc = 0; let desc = 0;
@@ -525,11 +555,11 @@
                             });
                         }
 
-                        projects[newId] = newProj;
+                        projects[stableId] = newProj;
                         if (!isViewOnly) saveToLocal(); 
                         
                         hideLoading();
-                        loadProject(newId);
+                        loadProject(stableId);
                     } catch (e) {
                         console.error("解析分享連結失敗:", e);
                         alert("分享連結無效或已損毀！");
@@ -613,13 +643,9 @@
                 if(eleChart) {
                     eleChart.data.datasets[0].data = proj.routePoints.map(p => ({ x: p.dist, y: p.ele }));
                     
-                    const elevations = proj.routePoints.map(p => p.ele);
-                    const minEle = Math.min(...elevations);
-                    const maxEle = Math.max(...elevations);
-                    const paddingEle = Math.max(10, (maxEle - minEle) * 0.15);
-                    
-                    eleChart.options.scales.y.min = Math.floor(Math.max(0, minEle - paddingEle));
-                    eleChart.options.scales.y.max = Math.ceil(maxEle + paddingEle);
+                    // 移除手動 Y 軸範圍裁剪限制，讓 Chart.js 自動且標準地對齊高度範圍
+                    delete eleChart.options.scales.y.min;
+                    delete eleChart.options.scales.y.max;
                     eleChart.update();
                 }
                 
@@ -788,6 +814,16 @@
             const R = 6371; const dLat = (lat2-lat1)*Math.PI/180; const dLon = (lon2-lon1)*Math.PI/180;
             const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        // 預估步行時間計算輔助 (Naismith's Rule 模型，假設山區平均步行速度為 3.0 km/h)
+        function getEstimatedWalkingTimeStr(dist_km) {
+            const totalMins = Math.round(dist_km * 20); // 1 公里 = 20 分鐘
+            if (totalMins < 1) return '約 1 分鐘內';
+            if (totalMins < 60) return `約 ${totalMins} 分鐘`;
+            const hrs = Math.floor(totalMins / 60);
+            const mins = totalMins % 60;
+            return `約 ${hrs} 小時 ${mins} 分鐘`;
         }
 
         // 高精度調整：上限提升至 3000 點，完整容納一千多點的登山路線，不失真裁切
@@ -1172,10 +1208,11 @@
             const lat = position.coords.latitude; const lng = position.coords.longitude;
             let statusText = `精度: ${Math.round(position.coords.accuracy)}m`;
 
-            // 計算與鎖定的導航地標之間的距離
+            // 計算與鎖定的導航地標之間的距離以及預估步行時間
             if (targetMarker) {
                 const d = getDistance(lat, lng, targetMarker.lat, targetMarker.lng);
-                statusText += ` | 距${targetMarker.name.slice(0,4)}: ${d < 1 ? Math.round(d*1000)+'m' : d.toFixed(2)+'km'}`;
+                const estimatedTimeStr = getEstimatedWalkingTimeStr(d); // 轉為步行時間字串
+                statusText += ` | 距${targetMarker.name.slice(0,4)}: ${d < 1 ? Math.round(d*1000)+'m' : d.toFixed(2)+'km'} (${estimatedTimeStr})`;
             }
 
             const currentProj = projects[currentProjectId];
