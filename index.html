@@ -841,8 +841,11 @@
         }
 
         // 預估步行時間計算輔助 (Naismith's Rule 模型，假設山區平均步行速度為 3.0 km/h)
-        function getEstimatedWalkingTimeStr(dist_km) {
-            const totalMins = Math.round(dist_km * 20); // 1 公里 = 20 分鐘
+        function getEstimatedWalkingTimeStr(dist_km, isStraightLine = false) {
+            // 由於山路蜿蜒且直線測距無法得知中途爬升，若是直線導航，給予 1.6 倍的時間補償係數
+            const multiplier = isStraightLine ? 1.6 : 1;
+            const totalMins = Math.round(dist_km * 20 * multiplier); // 1 公里 = 20 分鐘
+            
             if (totalMins < 1) return '約 1 分鐘內';
             if (totalMins < 60) return `約 ${totalMins} 分鐘`;
             const hrs = Math.floor(totalMins / 60);
@@ -1235,7 +1238,8 @@
             // 計算與鎖定的導航地標之間的距離以及預估步行時間
             if (targetMarker) {
                 const d = getDistance(lat, lng, targetMarker.lat, targetMarker.lng);
-                const estimatedTimeStr = getEstimatedWalkingTimeStr(d); // 轉為步行時間字串
+                // 傳入 true，告訴函式這是「直線距離」，讓它自動加上山區補償時間
+                const estimatedTimeStr = getEstimatedWalkingTimeStr(d, true); 
                 statusText += ` | 距${targetMarker.name.slice(0,4)}: ${d < 1 ? Math.round(d*1000)+'m' : d.toFixed(2)+'km'} (${estimatedTimeStr})`;
             }
 
