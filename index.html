@@ -81,7 +81,6 @@
             align-items: center;
             justify-content: center;
             color: white;
-            /* 拿掉 transform 的變化，僅使用 box-shadow 製造發光效果，避免覆蓋經緯度定位 */
             animation: marker-glow 2s infinite alternate ease-in-out;
         }
 
@@ -185,7 +184,7 @@
             </div>
             
             <div class="flex gap-3 h-36 w-full">
-                <!-- 左側數據統計 (修改為 2x2 網格以容納時間資訊) -->
+                <!-- 左側數據統計 -->
                 <div class="grid grid-cols-2 grid-rows-2 gap-x-3 gap-y-2 content-center items-center bg-white/60 rounded-xl p-2 min-w-[110px] shrink-0 border border-white/50 shadow-sm">
                     <div class="flex flex-col items-center" title="總距離">
                         <i data-lucide="route" class="w-3 h-3 text-gray-500 mb-0.5"></i>
@@ -632,11 +631,11 @@
             let timeStr = '--';
             if (totalMins > 0) {
                 if (totalMins < 60) {
-                    timeStr = `${totalMins}m`; // 例: 45m
+                    timeStr = `${totalMins}m`;
                 } else {
                     const h = Math.floor(totalMins / 60);
                     const m = totalMins % 60;
-                    timeStr = `${h}h${m}m`; // 例: 2h15m
+                    timeStr = `${h}h${m}m`;
                 }
             }
             document.getElementById('stat-time').textContent = timeStr;
@@ -691,10 +690,11 @@
                 
                 <div class="text-[10px] text-gray-500 mt-1 px-1">選擇圖示：</div>
                 <div class="flex gap-2 justify-between px-1" id="icon-picker">
-                    ${['mountain', 'star', 'P', 'wc', 'tent'].map(icon => `
+                    ${['mountain', 'star', 'google-pin', 'P', 'wc', 'tent'].map(icon => `
                         <button class="w-7 h-7 rounded-lg flex items-center justify-center icon-btn transition ${mData.icon === icon || (!mData.icon && icon === 'mountain') ? 'ring-2 ring-offset-1 ring-gray-400 bg-gray-200' : 'bg-gray-100 opacity-60 hover:opacity-100'}" data-icon="${icon}">
                             ${icon === 'P' ? '<span class="text-[12px] font-black text-gray-700 pointer-events-none">P</span>' : 
                               icon === 'wc' ? '<span class="text-[10px] font-black text-gray-700 pointer-events-none">WC</span>' : 
+                              icon === 'google-pin' ? '<svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-gray-700 pointer-events-none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>' :
                               `<i data-lucide="${icon}" class="w-4 h-4 text-gray-700 pointer-events-none"></i>`}
                         </button>
                     `).join('')}
@@ -747,9 +747,10 @@
             el.className = 'custom-poi-marker';
             el.style.backgroundColor = mData.color || '#e27653';
             
-            const iconName = mData.icon || 'map-pin';
+            const iconName = mData.icon || 'google-pin';
             if (iconName === 'wc') el.innerHTML = `<span style="font-size: 11px; font-weight: 900; line-height: 1;">WC</span>`;
             else if (iconName === 'P') el.innerHTML = `<span style="font-size: 13px; font-weight: 900; line-height: 1;">P</span>`;
+            else if (iconName === 'google-pin') el.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`;
             else el.innerHTML = `<i data-lucide="${iconName}" class="w-4 h-4"></i>`;
             
             setTimeout(() => lucide.createIcons({ root: el }), 0);
@@ -915,8 +916,8 @@
                     lng: lng,
                     name: nameNode ? nameNode.textContent.trim() : "未命名地標",
                     desc: descNode ? descNode.textContent.trim() : "",
-                    color: '#eab308',
-                    icon: 'map-pin'
+                    color: '#3b82f6', // 將匯入地標的預設顏色改為藍色
+                    icon: 'google-pin' // 改用經典 Google 水滴地標作為預設
                 };
             });
 
@@ -985,8 +986,8 @@
                                         lng: lng,
                                         name: pmName ? pmName.textContent.trim() : "未命名地標",
                                         desc: pmDesc ? pmDesc.textContent.replace(/(<([^>]+)>)/gi, "").trim() : "",
-                                        color: '#eab308', 
-                                        icon: 'map-pin'
+                                        color: '#3b82f6', // 將匯入地標的預設顏色改為藍色
+                                        icon: 'google-pin' // 改用經典 Google 水滴地標作為預設
                                     });
                                 }
                             }
