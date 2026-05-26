@@ -992,45 +992,61 @@
         });
 
         function exportToKML() {
+            function exportData(format) {
             const proj = projects[currentProjectId];
             if (!proj || (!proj.routePoints.length && !proj.markers.length)) {
-                alert('目前沒有可以匯出的軌跡或地標資料！');
+                alert('目前沒有可以匯出的資料！');
                 return;
             }
 
-            let kml = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n  <Document>\n    <name>${proj.name || '匯出專案'}</name>\n`;
+            let fileContent = "";
+            let fileName = `${proj.name || 'route'}.${format}`;
+            let mimeType = format === 'kml' ? 'application/vnd.google-earth.kml+xml' : 'application/gpx+xml';
 
-            if (proj.routePoints && proj.routePoints.length > 0) {
-                kml += `    <Placemark>\n      <name>路線軌跡</name>\n      <LineString>\n        <tessellate>1</tessellate>\n        <coordinates>\n`;
-                proj.routePoints.forEach(p => {
-                    kml += `          ${p.lng},${p.lat},${p.ele || 0}\n`;
-                });
-                kml += `        </coordinates>\n      </LineString>\n    </Placemark>\n`;
-            }
-
-            if (proj.markers && proj.markers.length > 0) {
+            if (format === 'kml') {
+                fileContent = `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n  <Document>\n    <name>${proj.name}</name>\n`;
+                if (proj.routePoints.length > 0) {
+                    fileContent += `    <Placemark>\n      <name>路線軌跡</name>\n      <LineString><coordinates>\n`;
+                    proj.routePoints.forEach(p => fileContent += `${p.lng},${p.lat},${p.ele || 0}\n`);
+                    fileContent += `      </coordinates></LineString>\n    </Placemark>\n`;
+                }
                 proj.markers.forEach(m => {
-                    const safeName = (m.name || '未命名地標').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                    const safeDesc = (m.desc || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                    kml += `    <Placemark>\n      <name>${safeName}</name>\n      <description>${safeDesc}</description>\n`;
-                    // 新增：將圖示與顏色寫入 KML 的擴充資料區 (ExtendedData)
-                    kml += `      <ExtendedData>\n        <Data name="icon"><value>${m.icon || 'google-pin'}</value></Data>\n        <Data name="color"><value>${m.color || '#3b82f6'}</value></Data>\n      </ExtendedData>\n`;
-                    kml += `      <Point>\n        <coordinates>${m.lng},${m.lat},0</coordinates>\n      </Point>\n    </Placemark>\n`;
+                    fileContent += `    <Placemark>\n      <name>${m.name}</name>\n      <ExtendedData><Data name="icon"><value>${m.icon}</value></Data><Data name="color"><value>${m.color}</value></Data></ExtendedData>\n      <Point><coordinates>${m.lng},${m.lat},0</coordinates></Point>\n    </Placemark>\n`;
                 });
+                fileContent += `  </Document>\n</kml>`;
+            } else {
+                fileContent = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="MountainMap">\n  <trk>\n    <name>${proj.name}</name>\n    <trkseg>\n`;
+                proj.routePoints.forEach(p => {
+                    fileContent += `      <trkpt lat="${p.lat}" lon="${p.lng}"><ele>${p.ele || 0}</ele></trkpt>\n`;
+                });
+                fileContent += `    </trkseg>\n  </trk>\n`;
+                proj.markers.forEach(m => {
+                    fileContent += `  <wpt lat="${m.lat}" lon="${m.lng}"><name>${m.name}</name></wpt>\n`;
+                });
+                fileContent += `</gpx>`;
             }
 
-            kml += `  </Document>\n</kml>`;
-
-            const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml;charset=utf-8' });
+            const blob = new Blob([fileContent], { type: `${mimeType};charset=utf-8` });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${proj.name || 'route'}.kml`;
+            a.download = fileName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
+
+        // 修改原本的匯出按鈕觸發邏輯
+        function exportToKML() {
+            if (confirm("請選擇匯出格式：\n\n按「確定」下載 KML (包含圖示顏色)\n按「取消」下載 GPX (相容性最佳)")) {
+                exportData('kml');
+            } else {
+                exportData('gpx');
+            }
+        }
+
+<!-- ... (後段代碼保持不變) ... -->
 
         // --- 新增點位 ---
         let isAddingPoint = false;
