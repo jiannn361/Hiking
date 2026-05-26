@@ -146,7 +146,7 @@
 
         <button id="btn-layer" onclick="toggleMapStyle()" class="bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-2.5 hover:bg-white active:scale-95 transition text-[#4a503d] pointer-events-auto border border-white/60 shadow-md flex flex-col items-center mt-1 w-[52px]">
             <i data-lucide="layers" class="w-5 h-5"></i>
-            <span id="layer-name" class="text-[8px] font-bold mt-0.5 whitespace-nowrap truncate w-full text-center">純衛星(乾淨)</span>
+            <span id="layer-name" class="text-[8px] font-bold mt-0.5 whitespace-nowrap truncate w-full text-center">純衛星</span>
         </button>
 
         <div id="editor-controls-right" class="flex flex-col gap-2.5 pointer-events-none mt-1">
@@ -154,12 +154,17 @@
                 <i data-lucide="folder" class="w-5 h-5"></i>
             </button>
 
+            <!-- 新增：路線編輯(裁切/反轉)按鈕 -->
+            <button onclick="openRouteEditor()" class="bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-3.5 hover:bg-white transition text-[#4a503d] pointer-events-auto border border-white/60 shadow-md flex flex-col items-center animate-fade-in" title="編輯路線 (裁切/反轉)">
+                <i data-lucide="scissors" class="w-5 h-5"></i>
+            </button>
+
             <label for="gpx-upload" class="bg-[#f0ece1]/90 backdrop-blur-md border border-white/60 shadow-md rounded-full p-3.5 hover:bg-white cursor-pointer transition text-[#4a503d] pointer-events-auto flex flex-col items-center" title="匯入路線 (GPX/KML)">
                 <i data-lucide="download" class="w-5 h-5"></i>
             </label>
             <input type="file" id="gpx-upload" accept=".gpx,.kml,.kmz">
 
-            <button onclick="exportToKML()" class="bg-[#f0ece1]/90 backdrop-blur-md border border-white/60 shadow-md rounded-full p-3.5 hover:bg-white transition text-[#4a503d] pointer-events-auto flex flex-col items-center" title="匯出目前路線為 KML">
+            <button onclick="exportToKML()" class="bg-[#f0ece1]/90 backdrop-blur-md border border-white/60 shadow-md rounded-full p-3.5 hover:bg-white transition text-[#4a503d] pointer-events-auto flex flex-col items-center" title="匯出目前路線為 KML/GPX">
                 <i data-lucide="upload" class="w-5 h-5"></i>
             </button>
 
@@ -227,7 +232,7 @@
     </div>
 
     <!-- 專案管理 Modal -->
-    <div id="project-modal" class="ui-layer fixed inset-0 bg-black/40 backdrop-blur-sm hidden flex-col justify-center items-center pointer-events-auto">
+    <div id="project-modal" class="ui-layer fixed inset-0 bg-black/40 backdrop-blur-sm hidden flex-col justify-center items-center pointer-events-auto z-[2000]">
         <div class="bg-[#f0ece1] w-[90%] max-w-sm rounded-[2rem] p-6 shadow-2xl flex flex-col gap-4 max-h-[80vh]">
             <div class="flex justify-between items-center mb-2">
                 <h2 class="font-bold text-lg text-[#3e4433] flex items-center gap-2"><i data-lucide="folder-open" class="w-5 h-5 text-[#5c7042]"></i> 專案管理</h2>
@@ -240,6 +245,40 @@
 
             <button onclick="createNewProject()" class="mt-2 w-full bg-[#5c7042] text-white rounded-xl py-3 font-bold hover:bg-[#4a5a35] transition shadow flex justify-center items-center gap-2">
                 <i data-lucide="plus" class="w-4 h-4"></i> 建立新專案
+            </button>
+        </div>
+    </div>
+
+    <!-- 路線編輯 (裁切/反轉) Modal -->
+    <div id="route-edit-modal" class="ui-layer fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex-col justify-end sm:justify-center items-center pointer-events-auto z-[2000] pb-10 sm:pb-0">
+        <div class="bg-[#f0ece1] w-full sm:w-[90%] max-w-sm rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl flex flex-col gap-4">
+            <div class="flex justify-between items-center">
+                <h2 class="font-bold text-lg text-[#3e4433] flex items-center gap-2"><i data-lucide="scissors" class="w-5 h-5 text-[#5c7042]"></i> 編輯路線軌跡</h2>
+                <button onclick="closeRouteEditor()" class="text-gray-500 hover:text-gray-800 bg-white/50 rounded-full p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div class="flex flex-col gap-3 bg-white/70 p-4 rounded-2xl border border-white shadow-inner">
+                <div>
+                    <span class="text-sm font-bold text-gray-800 flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3 text-[#5c7042]"></i> 調整起點</span>
+                    <input type="range" id="trim-start-slider" class="w-full mt-2 accent-[#5c7042]" min="0" value="0">
+                    <div class="text-xs text-gray-500 font-medium text-right mt-1" id="trim-start-val">0.00 km 處</div>
+                </div>
+                
+                <div class="w-full h-px bg-gray-200"></div>
+
+                <div>
+                    <span class="text-sm font-bold text-gray-800 flex items-center gap-1"><i data-lucide="flag" class="w-3 h-3 text-[#e27653]"></i> 調整終點</span>
+                    <input type="range" id="trim-end-slider" class="w-full mt-2 accent-[#e27653]" min="0" value="100">
+                    <div class="text-xs text-gray-500 font-medium text-right mt-1" id="trim-end-val">-- km 處</div>
+                </div>
+            </div>
+
+            <button onclick="reverseCurrentRoute()" class="w-full bg-white text-[#3b82f6] border-2 border-[#3b82f6]/30 rounded-xl py-3 font-bold hover:bg-blue-50 active:scale-95 transition shadow-sm flex justify-center items-center gap-2">
+                <i data-lucide="arrow-left-right" class="w-5 h-5"></i> 將路線反轉 (下山改上山)
+            </button>
+
+            <button onclick="applyRouteEdit()" class="w-full bg-[#5c7042] text-white rounded-xl py-3 mt-2 font-bold hover:bg-[#4a5a35] active:scale-95 transition shadow-md flex justify-center items-center gap-2">
+                <i data-lucide="check-circle" class="w-5 h-5"></i> 儲存並套用變更
             </button>
         </div>
     </div>
@@ -494,7 +533,6 @@
             } else if (routeUrl) {
                 showLoading();
                 
-                // 為外部網址建立獨立專案 ID，防止混進舊有專案
                 let hash = 0;
                 for (let i = 0; i < routeUrl.length; i++) {
                     hash = ((hash << 5) - hash) + routeUrl.charCodeAt(i);
@@ -503,11 +541,9 @@
                 const stableId = 'proj_url_' + Math.abs(hash);
 
                 if (projects[stableId]) {
-                    // 如果快取已有此網址的獨立專案，直接載入
                     hideLoading();
                     loadProject(stableId);
                 } else {
-                    // 若無，強制將當前專案切換為全新的乾淨空間
                     currentProjectId = stableId;
                     projects[currentProjectId] = { id: stableId, name: '載入中...', routePoints: [], markers: [] };
                     
@@ -519,7 +555,7 @@
                         .then(blob => {
                             const filename = routeUrl.split('?')[0].split('/').pop() || 'auto-loaded.kml';
                             const file = new File([blob], filename, { type: blob.type });
-                            processFile(file); // 處理完後會自動覆蓋進我們剛建好的乾淨專案裡
+                            processFile(file);
                         })
                         .catch(err => {
                             console.error("自動載入路線失敗:", err);
@@ -786,11 +822,14 @@
             return points.filter((_, index) => index % step === 0 || index === points.length - 1);
         }
 
-        function saveImportedData(parsedPts, routeName, importedMarkers = []) {
-            let totalDist = 0; let lastPoint = null;
-            let asc = 0; let desc = 0;
+        // 共用：重新計算路線總長與爬升高度 (用於匯入與裁切路線)
+        function recalculateRouteData(rawPoints) {
+            let totalDist = 0;
+            let lastPoint = null;
+            let asc = 0;
+            let desc = 0;
             
-            const routeData = parsedPts.map(pt => {
+            const newPoints = rawPoints.map(pt => {
                 if (lastPoint) {
                     totalDist += getDistance(lastPoint.lat, lastPoint.lng, pt.lat, pt.lng);
                     const diff = pt.ele - lastPoint.ele;
@@ -801,12 +840,17 @@
                 return { lat: pt.lat, lng: pt.lng, ele: pt.ele, dist: totalDist };
             });
 
-            const thinnedData = thinRouteData(routeData);
+            return { routePoints: newPoints, totalAsc: asc, totalDesc: desc };
+        }
+
+        function saveImportedData(parsedPts, routeName, importedMarkers = []) {
+            const result = recalculateRouteData(parsedPts);
+            const thinnedData = thinRouteData(result.routePoints);
 
             if (parsedPts.length > 0) {
                 projects[currentProjectId].routePoints = thinnedData;
-                projects[currentProjectId].totalAsc = asc;
-                projects[currentProjectId].totalDesc = desc;
+                projects[currentProjectId].totalAsc = result.totalAsc;
+                projects[currentProjectId].totalDesc = result.totalDesc;
             }
 
             if (importedMarkers && importedMarkers.length > 0) {
@@ -814,7 +858,6 @@
                 projects[currentProjectId].markers = projects[currentProjectId].markers.concat(importedMarkers);
             }
 
-            // 修正：無論是預設還是外部網址建立的獨立專案，都保證正確寫入步道名稱
             if (routeName) {
                 if (projects[currentProjectId].name === '預設專案' || projects[currentProjectId].name === '載入中...' || projects[currentProjectId].id.startsWith('proj_url_')) {
                     projects[currentProjectId].name = routeName;
@@ -823,6 +866,132 @@
             saveToLocal();
             loadProject(currentProjectId);
             hideLoading();
+        }
+
+        // --- 路線編輯 (裁切/反轉) 邏輯 ---
+        let tempTrimStart = 0;
+        let tempTrimEnd = 0;
+        let tempPreviewSourceId = 'route-preview';
+
+        function openRouteEditor() {
+            const proj = projects[currentProjectId];
+            if (!proj || !proj.routePoints || proj.routePoints.length < 2) {
+                alert('目前的路線軌跡點太少，無法編輯！');
+                return;
+            }
+
+            tempTrimStart = 0;
+            tempTrimEnd = proj.routePoints.length - 1;
+
+            const startSlider = document.getElementById('trim-start-slider');
+            const endSlider = document.getElementById('trim-end-slider');
+            
+            startSlider.max = tempTrimEnd;
+            endSlider.max = tempTrimEnd;
+            startSlider.value = tempTrimStart;
+            endSlider.value = tempTrimEnd;
+
+            // 建立紅色預覽裁切線
+            if (map.getSource(tempPreviewSourceId)) {
+                map.removeLayer('route-preview-line');
+                map.removeSource(tempPreviewSourceId);
+            }
+            map.addSource(tempPreviewSourceId, { type: 'geojson', data: getPreviewGeoJSON() });
+            map.addLayer({
+                id: 'route-preview-line',
+                type: 'line',
+                source: tempPreviewSourceId,
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: { 'line-color': '#ef4444', 'line-width': 8, 'line-opacity': 0.9 }
+            });
+            
+            // 隱藏原本黃色路線以凸顯紅色選取段
+            if (map.getLayer('route-line')) map.setLayoutProperty('route-line', 'visibility', 'none');
+
+            updatePreviewUI();
+
+            startSlider.oninput = (e) => {
+                tempTrimStart = parseInt(e.target.value);
+                if (tempTrimStart >= tempTrimEnd) { tempTrimStart = tempTrimEnd - 1; e.target.value = tempTrimStart; }
+                updatePreviewUI();
+            };
+            endSlider.oninput = (e) => {
+                tempTrimEnd = parseInt(e.target.value);
+                if (tempTrimEnd <= tempTrimStart) { tempTrimEnd = tempTrimStart + 1; e.target.value = tempTrimEnd; }
+                updatePreviewUI();
+            };
+
+            document.getElementById('route-edit-modal').classList.remove('hidden');
+            document.getElementById('route-edit-modal').classList.add('flex');
+            lucide.createIcons();
+        }
+
+        function updatePreviewUI() {
+            const proj = projects[currentProjectId];
+            const ptStart = proj.routePoints[tempTrimStart];
+            const ptEnd = proj.routePoints[tempTrimEnd];
+            
+            document.getElementById('trim-start-val').textContent = `${ptStart.dist.toFixed(2)} km 處`;
+            document.getElementById('trim-end-val').textContent = `${ptEnd.dist.toFixed(2)} km 處`;
+
+            if (map.getSource(tempPreviewSourceId)) {
+                map.getSource(tempPreviewSourceId).setData(getPreviewGeoJSON());
+            }
+        }
+
+        function getPreviewGeoJSON() {
+            const proj = projects[currentProjectId];
+            const sliced = proj.routePoints.slice(tempTrimStart, tempTrimEnd + 1);
+            const coords = sliced.map(p => [p.lng, p.lat]);
+            return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } };
+        }
+
+        function closeRouteEditor() {
+            document.getElementById('route-edit-modal').classList.add('hidden');
+            document.getElementById('route-edit-modal').classList.remove('flex');
+            
+            if (map.getLayer('route-preview-line')) {
+                map.removeLayer('route-preview-line');
+                map.removeSource(tempPreviewSourceId);
+            }
+            if (map.getLayer('route-line')) map.setLayoutProperty('route-line', 'visibility', 'visible');
+        }
+
+        function reverseCurrentRoute() {
+            const proj = projects[currentProjectId];
+            if (!proj || !proj.routePoints || proj.routePoints.length < 2) return;
+            
+            // 反轉原本的原始點陣列，然後重新計算累計距離與爬升
+            let reversedRaw = [...proj.routePoints].reverse();
+            const result = recalculateRouteData(reversedRaw);
+            
+            projects[currentProjectId].routePoints = result.routePoints;
+            projects[currentProjectId].totalAsc = result.totalAsc;
+            projects[currentProjectId].totalDesc = result.totalDesc;
+            
+            // 重設滑桿至極限並更新畫面
+            tempTrimStart = 0;
+            tempTrimEnd = result.routePoints.length - 1;
+            document.getElementById('trim-start-slider').value = tempTrimStart;
+            document.getElementById('trim-end-slider').value = tempTrimEnd;
+            updatePreviewUI();
+            
+            alert('🔄 路線已成功反轉方向！請確認紅色選取範圍，若無誤請點擊「套用變更」。');
+        }
+
+        function applyRouteEdit() {
+            const proj = projects[currentProjectId];
+            // 擷取使用者選取的段落，並重新計算該段的數據
+            const slicedRaw = proj.routePoints.slice(tempTrimStart, tempTrimEnd + 1);
+            const result = recalculateRouteData(slicedRaw);
+            
+            projects[currentProjectId].routePoints = result.routePoints;
+            projects[currentProjectId].totalAsc = result.totalAsc;
+            projects[currentProjectId].totalDesc = result.totalDesc;
+            
+            saveToLocal();
+            closeRouteEditor();
+            loadProject(currentProjectId);
         }
 
         function parseGPXText(gpxData) {
@@ -911,7 +1080,6 @@
                                 const pmName = pm.getElementsByTagName("name")[0];
                                 const pmDesc = pm.getElementsByTagName("description")[0];
                                 
-                                // 新增：嘗試讀取被打包在 ExtendedData 中的自訂顏色與圖示
                                 let customIcon = 'google-pin';
                                 let customColor = '#3b82f6';
                                 const extendedData = pm.getElementsByTagName("Data");
@@ -1026,7 +1194,6 @@
 
                 fileContent += `  </Document>\n</kml>`;
             } else {
-                // GPX 格式匯出邏輯
                 fileContent = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="MountainMap">\n  <trk>\n    <name>${proj.name || '匯出專案'}</name>\n    <trkseg>\n`;
                 if (proj.routePoints && proj.routePoints.length > 0) {
                     proj.routePoints.forEach(p => {
@@ -1055,7 +1222,6 @@
         }
 
         function exportToKML() {
-            // 改用自訂視窗，確保不會影響地圖容器版面
             const menu = document.createElement('div');
             menu.style.cssText = "position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:20px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.3); z-index:9999; text-align:center; min-width: 250px;";
             menu.innerHTML = `
