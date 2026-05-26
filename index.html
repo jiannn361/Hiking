@@ -154,8 +154,8 @@
                 <i data-lucide="folder" class="w-5 h-5"></i>
             </button>
 
-            <!-- 新增：路線編輯(裁切/反轉)按鈕 -->
-            <button onclick="openRouteEditor()" class="bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-3.5 hover:bg-white transition text-[#4a503d] pointer-events-auto border border-white/60 shadow-md flex flex-col items-center animate-fade-in" title="編輯路線 (裁切/反轉)">
+            <!-- 路線編輯(裁切/反轉/往返)按鈕 -->
+            <button onclick="openRouteEditor()" class="bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-3.5 hover:bg-white transition text-[#4a503d] pointer-events-auto border border-white/60 shadow-md flex flex-col items-center animate-fade-in" title="編輯路線 (裁切/反轉/往返)">
                 <i data-lucide="scissors" class="w-5 h-5"></i>
             </button>
 
@@ -249,7 +249,7 @@
         </div>
     </div>
 
-    <!-- 路線編輯 (裁切/反轉) Modal -->
+    <!-- 路線編輯 (裁切/反轉/往返) Modal -->
     <div id="route-edit-modal" class="ui-layer fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex-col justify-end sm:justify-center items-center pointer-events-auto z-[2000] pb-10 sm:pb-0">
         <div class="bg-[#f0ece1] w-full sm:w-[90%] max-w-sm rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl flex flex-col gap-4">
             <div class="flex justify-between items-center">
@@ -273,8 +273,13 @@
                 </div>
             </div>
 
+            <!-- 新增：轉為往返路線按鈕 -->
+            <button onclick="makeRoundTrip()" class="w-full bg-white text-[#10b981] border-2 border-[#10b981]/30 rounded-xl py-3 mt-1 font-bold hover:bg-green-50 active:scale-95 transition shadow-sm flex justify-center items-center gap-2">
+                <i data-lucide="repeat" class="w-5 h-5"></i> 轉為往返路線 (A ➔ B ➔ A)
+            </button>
+
             <button onclick="reverseCurrentRoute()" class="w-full bg-white text-[#3b82f6] border-2 border-[#3b82f6]/30 rounded-xl py-3 font-bold hover:bg-blue-50 active:scale-95 transition shadow-sm flex justify-center items-center gap-2">
-                <i data-lucide="arrow-left-right" class="w-5 h-5"></i> 將路線反轉 (下山改上山)
+                <i data-lucide="arrow-left-right" class="w-5 h-5"></i> 僅將路線反轉 (單程反向)
             </button>
 
             <button onclick="applyRouteEdit()" class="w-full bg-[#5c7042] text-white rounded-xl py-3 mt-2 font-bold hover:bg-[#4a5a35] active:scale-95 transition shadow-md flex justify-center items-center gap-2">
@@ -868,7 +873,7 @@
             hideLoading();
         }
 
-        // --- 路線編輯 (裁切/反轉) 邏輯 ---
+        // --- 路線編輯 (裁切/反轉/往返) 邏輯 ---
         let tempTrimStart = 0;
         let tempTrimEnd = 0;
         let tempPreviewSourceId = 'route-preview';
@@ -956,6 +961,41 @@
             }
             if (map.getLayer('route-line')) map.setLayoutProperty('route-line', 'visibility', 'visible');
         }
+        
+        // 新增：將單程轉為往返路線 (A -> B -> A)
+        function makeRoundTrip() {
+            const proj = projects[currentProjectId];
+            if (!proj || !proj.routePoints || proj.routePoints.length < 2) return;
+            
+            // 擷取目前所選取的路線段落
+            const originalSegment = proj.routePoints.slice(tempTrimStart, tempTrimEnd + 1);
+            
+            // 將這個段落反轉 (並剔除第一個點以避免原地重複)
+            const returnSegment = [...originalSegment].reverse().slice(1);
+            
+            // 合併：去程 + 回程
+            const roundTripRaw = originalSegment.concat(returnSegment);
+            
+            // 重新計算合併後的距離、爬升、下降
+            const result = recalculateRouteData(roundTripRaw);
+            
+            // 更新專案資料
+            projects[currentProjectId].routePoints = result.routePoints;
+            projects[currentProjectId].totalAsc = result.totalAsc;
+            projects[currentProjectId].totalDesc = result.totalDesc;
+            
+            // 重置滑桿以涵蓋全新的往返路線長度
+            tempTrimStart = 0;
+            tempTrimEnd = result.routePoints.length - 1;
+            document.getElementById('trim-start-slider').max = tempTrimEnd;
+            document.getElementById('trim-end-slider').max = tempTrimEnd;
+            document.getElementById('trim-start-slider').value = tempTrimStart;
+            document.getElementById('trim-end-slider').value = tempTrimEnd;
+            
+            updatePreviewUI();
+            
+            alert('🔁 已成功將路線轉為「往返路線 (去程+回程)」！\n距離與高度圖已更新，確認無誤後請點擊下方「套用變更」。');
+        }
 
         function reverseCurrentRoute() {
             const proj = projects[currentProjectId];
@@ -976,7 +1016,7 @@
             document.getElementById('trim-end-slider').value = tempTrimEnd;
             updatePreviewUI();
             
-            alert('🔄 路線已成功反轉方向！請確認紅色選取範圍，若無誤請點擊「套用變更」。');
+            alert('🔄 路線已成功反向！請確認紅色選取範圍，若無誤請點擊「套用變更」。');
         }
 
         function applyRouteEdit() {
