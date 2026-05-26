@@ -910,6 +910,15 @@
                                 const pmName = pm.getElementsByTagName("name")[0];
                                 const pmDesc = pm.getElementsByTagName("description")[0];
                                 
+                                // 新增：嘗試讀取被打包在 ExtendedData 中的自訂顏色與圖示
+                                let customIcon = 'google-pin';
+                                let customColor = '#3b82f6';
+                                const extendedData = pm.getElementsByTagName("Data");
+                                for(let j = 0; j < extendedData.length; j++) {
+                                    if(extendedData[j].getAttribute('name') === 'icon') customIcon = extendedData[j].getElementsByTagName('value')[0]?.textContent || customIcon;
+                                    if(extendedData[j].getAttribute('name') === 'color') customColor = extendedData[j].getElementsByTagName('value')[0]?.textContent || customColor;
+                                }
+                                
                                 if (!isNaN(lat) && !isNaN(lng)) {
                                     importedMarkers.push({
                                         id: 'poi_' + Date.now() + '_kml_' + i,
@@ -917,8 +926,8 @@
                                         lng: lng,
                                         name: pmName ? pmName.textContent.trim() : "未命名地標",
                                         desc: pmDesc ? pmDesc.textContent.replace(/(<([^>]+)>)/gi, "").trim() : "",
-                                        color: '#3b82f6', 
-                                        icon: 'google-pin'
+                                        color: customColor, 
+                                        icon: customIcon
                                     });
                                 }
                             }
@@ -1003,7 +1012,10 @@
                 proj.markers.forEach(m => {
                     const safeName = (m.name || '未命名地標').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                     const safeDesc = (m.desc || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                    kml += `    <Placemark>\n      <name>${safeName}</name>\n      <description>${safeDesc}</description>\n      <Point>\n        <coordinates>${m.lng},${m.lat},0</coordinates>\n      </Point>\n    </Placemark>\n`;
+                    kml += `    <Placemark>\n      <name>${safeName}</name>\n      <description>${safeDesc}</description>\n`;
+                    // 新增：將圖示與顏色寫入 KML 的擴充資料區 (ExtendedData)
+                    kml += `      <ExtendedData>\n        <Data name="icon"><value>${m.icon || 'google-pin'}</value></Data>\n        <Data name="color"><value>${m.color || '#3b82f6'}</value></Data>\n      </ExtendedData>\n`;
+                    kml += `      <Point>\n        <coordinates>${m.lng},${m.lat},0</coordinates>\n      </Point>\n    </Placemark>\n`;
                 });
             }
 
