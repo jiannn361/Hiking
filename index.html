@@ -659,8 +659,9 @@
                 <textarea id="poi-desc" placeholder="輸入介紹/備註..." class="w-full border border-gray-300 rounded p-1.5 text-xs outline-none focus:border-[#5c7042] mt-1 resize-none" rows="2">${mData.desc || ''}</textarea>
                 
                 <div class="text-[10px] text-gray-500 mt-1 px-1">選擇圖示：</div>
-                <div class="flex gap-2 justify-between px-1" id="icon-picker">
-                    ${['mountain', 'star', 'google-pin', 'P', 'wc', 'tent'].map(icon => `
+                <!-- 修正：將 justify-between 改為 flex-wrap 讓多出的圖示可以自動換行排版 -->
+                <div class="flex gap-2 flex-wrap px-1" id="icon-picker">
+                    ${['mountain', 'star', 'google-pin', 'P', 'wc', 'tent', 'bus-front'].map(icon => `
                         <button class="w-7 h-7 rounded-lg flex items-center justify-center icon-btn transition ${mData.icon === icon || (!mData.icon && icon === 'mountain') ? 'ring-2 ring-offset-1 ring-gray-400 bg-gray-200' : 'bg-gray-100 opacity-60 hover:opacity-100'}" data-icon="${icon}">
                             ${icon === 'P' ? '<span class="text-[12px] font-black text-gray-700 pointer-events-none">P</span>' : 
                               icon === 'wc' ? '<span class="text-[10px] font-black text-gray-700 pointer-events-none">WC</span>' : 
