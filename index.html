@@ -130,8 +130,8 @@
         </div>
     </div>
 
-    <!-- 右側工具列 -->
-    <div class="ui-layer absolute top-28 right-4 flex flex-col gap-2.5 pointer-events-none items-end max-h-[60vh] overflow-y-auto hide-scrollbar pb-4">
+    <!-- 右側工具列 (電腦版優化：移除高度限制以完整顯示) -->
+    <div class="ui-layer absolute top-28 right-4 flex flex-col gap-2.5 pointer-events-none items-end overflow-visible pb-4">
         
         <!-- 縮放區塊 -->
         <div class="flex flex-col gap-1 bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-1 border border-white/60 shadow-md pointer-events-auto">
@@ -154,7 +154,7 @@
                 <i data-lucide="folder" class="w-5 h-5"></i>
             </button>
 
-            <!-- 新增：復原按鈕 -->
+            <!-- 復原按鈕 -->
             <button onclick="undoLastAction()" class="bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-3.5 hover:bg-white transition text-blue-600 pointer-events-auto border border-white/60 shadow-md flex flex-col items-center animate-fade-in" title="復原上一步 (Ctrl+Z)">
                 <i data-lucide="undo-2" class="w-5 h-5"></i>
             </button>
@@ -212,7 +212,6 @@
                         <span class="text-[9px] text-gray-500">m</span>
                     </div>
                 </div>
-                <!-- 修正：加上 min-w-0 與 h-full 防止圖表撐破外框 -->
                 <div class="flex-grow w-full h-full relative min-w-0">
                     <canvas id="elevationChart"></canvas>
                 </div>
@@ -245,7 +244,6 @@
             </div>
             
             <div id="project-list" class="flex flex-col gap-3 overflow-y-auto hide-scrollbar">
-                <!-- 專案列表 -->
             </div>
 
             <button onclick="createNewProject()" class="mt-2 w-full bg-[#5c7042] text-white rounded-xl py-3 font-bold hover:bg-[#4a5a35] transition shadow flex justify-center items-center gap-2">
@@ -254,7 +252,7 @@
         </div>
     </div>
 
-    <!-- 路線編輯 (裁切/反轉/往返) Modal -->
+    <!-- 路線編輯 Modal -->
     <div id="route-edit-modal" class="ui-layer fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex-col justify-end sm:justify-center items-center pointer-events-auto z-[2000] pb-10 sm:pb-0">
         <div class="bg-[#f0ece1] w-full sm:w-[90%] max-w-sm rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl flex flex-col gap-4">
             <div class="flex justify-between items-center">
@@ -283,7 +281,6 @@
                 </div>
             </div>
 
-            <!-- 新增：轉為往返路線按鈕 -->
             <button onclick="makeRoundTrip()" class="w-full bg-white text-[#10b981] border-2 border-[#10b981]/30 rounded-xl py-3 mt-1 font-bold hover:bg-green-50 active:scale-95 transition shadow-sm flex justify-center items-center gap-2">
                 <i data-lucide="repeat" class="w-5 h-5"></i> 轉為往返路線 (A ➔ B ➔ A)
             </button>
@@ -313,63 +310,35 @@
         
         // --- 復原系統 (Undo) 變數與邏輯 ---
         let undoStack = [];
-        const MAX_UNDO = 20; // 最多記憶 20 步
+        const MAX_UNDO = 20; 
 
         function saveStateForUndo() {
             if (!currentProjectId || !projects[currentProjectId]) return;
-            // 深拷貝當前狀態
             const currentState = JSON.parse(JSON.stringify(projects[currentProjectId]));
             undoStack.push(currentState);
-            if (undoStack.length > MAX_UNDO) {
-                undoStack.shift();
-            }
+            if (undoStack.length > MAX_UNDO) undoStack.shift();
         }
 
         function undoLastAction() {
-            if (undoStack.length === 0) {
-                alert('沒有可以復原的動作了！');
-                return;
-            }
+            if (undoStack.length === 0) return;
             const previousState = undoStack.pop();
             projects[currentProjectId] = previousState;
             saveToLocal();
-            
-            // 重新載入畫面 (傳入 true 代表這是復原操作，不要清空 Undo 紀錄)
             loadProject(currentProjectId, true);
-            
-            // 如果路線編輯器還開著，連動更新 UI
-            const editModal = document.getElementById('route-edit-modal');
-            if (editModal && !editModal.classList.contains('hidden')) {
-                tempTrimStart = 0;
-                tempTrimEnd = projects[currentProjectId].routePoints ? projects[currentProjectId].routePoints.length - 1 : 0;
-                const startSlider = document.getElementById('trim-start-slider');
-                const endSlider = document.getElementById('trim-end-slider');
-                if(startSlider && endSlider) {
-                    startSlider.max = tempTrimEnd;
-                    endSlider.max = tempTrimEnd;
-                    startSlider.value = tempTrimStart;
-                    endSlider.value = tempTrimEnd;
-                }
-                updatePreviewUI();
-            }
         }
 
-        // 綁定鍵盤 Ctrl+Z
         window.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-                // 如果在輸入文字 (例如地標名稱) 則不要攔截
                 if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
                 e.preventDefault();
                 undoLastAction();
             }
         });
 
-        // --- 專案初始化 ---
         try {
             projects = JSON.parse(localStorage.getItem('hiking_app_projects')) || {};
             currentProjectId = localStorage.getItem('hiking_app_current_id');
         } catch (e) {
-            console.error("無法讀取 LocalStorage", e);
             projects = {};
         }
 
@@ -385,9 +354,7 @@
             try {
                 localStorage.setItem('hiking_app_projects', JSON.stringify(projects));
                 localStorage.setItem('hiking_app_current_id', currentProjectId);
-            } catch (e) {
-                console.warn("LocalStorage 容量滿", e);
-            }
+            } catch (e) {}
         }
 
         const map = new maplibregl.Map({
@@ -411,7 +378,6 @@
             zoom: 13,
             attributionControl: true
         });
-
         let currentMapStyle = 'satellite-pure';
         const styles = ['topo', 'standard', 'satellite', 'satellite-pure'];
         const styleNames = { topo: '地形', standard: '標準', satellite: '衛星+標籤', 'satellite-pure': '純衛星(乾淨)' };
