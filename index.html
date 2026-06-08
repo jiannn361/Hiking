@@ -154,6 +154,11 @@
                 <i data-lucide="folder" class="w-5 h-5"></i>
             </button>
 
+            <!-- 新增：復原按鈕 -->
+            <button onclick="undoLastAction()" class="bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-3.5 hover:bg-white transition text-blue-600 pointer-events-auto border border-white/60 shadow-md flex flex-col items-center animate-fade-in" title="復原上一步 (Ctrl+Z)">
+                <i data-lucide="undo-2" class="w-5 h-5"></i>
+            </button>
+
             <!-- 路線編輯(裁切/反轉/往返)按鈕 -->
             <button onclick="openRouteEditor()" class="bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-3.5 hover:bg-white transition text-[#4a503d] pointer-events-auto border border-white/60 shadow-md flex flex-col items-center animate-fade-in" title="編輯路線 (裁切/反轉/往返)">
                 <i data-lucide="scissors" class="w-5 h-5"></i>
@@ -254,7 +259,12 @@
         <div class="bg-[#f0ece1] w-full sm:w-[90%] max-w-sm rounded-t-[2rem] sm:rounded-[2rem] p-6 shadow-2xl flex flex-col gap-4">
             <div class="flex justify-between items-center">
                 <h2 class="font-bold text-lg text-[#3e4433] flex items-center gap-2"><i data-lucide="scissors" class="w-5 h-5 text-[#5c7042]"></i> 編輯路線軌跡</h2>
-                <button onclick="closeRouteEditor()" class="text-gray-500 hover:text-gray-800 bg-white/50 rounded-full p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <div class="flex gap-2 items-center">
+                    <button onclick="undoLastAction()" class="text-blue-600 hover:text-blue-800 bg-blue-50/80 hover:bg-blue-100 rounded-full p-1 px-3 text-xs font-bold transition flex items-center gap-1 shadow-sm border border-blue-200">
+                        <i data-lucide="undo-2" class="w-3 h-3"></i> 復原
+                    </button>
+                    <button onclick="closeRouteEditor()" class="text-gray-500 hover:text-gray-800 bg-white/50 rounded-full p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
             </div>
             
             <div class="flex flex-col gap-3 bg-white/70 p-4 rounded-2xl border border-white shadow-inner">
@@ -300,7 +310,61 @@
         
         let projects = {};
         let currentProjectId = null;
+        
+        // --- 復原系統 (Undo) 變數與邏輯 ---
+        let undoStack = [];
+        const MAX_UNDO = 20; // 最多記憶 20 步
 
+        function saveStateForUndo() {
+            if (!currentProjectId || !projects[currentProjectId]) return;
+            // 深拷貝當前狀態
+            const currentState = JSON.parse(JSON.stringify(projects[currentProjectId]));
+            undoStack.push(currentState);
+            if (undoStack.length > MAX_UNDO) {
+                undoStack.shift();
+            }
+        }
+
+        function undoLastAction() {
+            if (undoStack.length === 0) {
+                alert('沒有可以復原的動作了！');
+                return;
+            }
+            const previousState = undoStack.pop();
+            projects[currentProjectId] = previousState;
+            saveToLocal();
+            
+            // 重新載入畫面 (傳入 true 代表這是復原操作，不要清空 Undo 紀錄)
+            loadProject(currentProjectId, true);
+            
+            // 如果路線編輯器還開著，連動更新 UI
+            const editModal = document.getElementById('route-edit-modal');
+            if (editModal && !editModal.classList.contains('hidden')) {
+                tempTrimStart = 0;
+                tempTrimEnd = projects[currentProjectId].routePoints ? projects[currentProjectId].routePoints.length - 1 : 0;
+                const startSlider = document.getElementById('trim-start-slider');
+                const endSlider = document.getElementById('trim-end-slider');
+                if(startSlider && endSlider) {
+                    startSlider.max = tempTrimEnd;
+                    endSlider.max = tempTrimEnd;
+                    startSlider.value = tempTrimStart;
+                    endSlider.value = tempTrimEnd;
+                }
+                updatePreviewUI();
+            }
+        }
+
+        // 綁定鍵盤 Ctrl+Z
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                // 如果在輸入文字 (例如地標名稱) 則不要攔截
+                if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                e.preventDefault();
+                undoLastAction();
+            }
+        });
+
+        // --- 專案初始化 ---
         try {
             projects = JSON.parse(localStorage.getItem('hiking_app_projects')) || {};
             currentProjectId = localStorage.getItem('hiking_app_current_id');
@@ -477,7 +541,6 @@
             if(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
         }
 
-        // --- 核心修正：避免不同網址的地標互相污染 ---
         map.on('load', () => {
             const routeUrl = urlParams.get('route');
             const shareData = urlParams.get('s');
@@ -613,7 +676,10 @@
             document.getElementById('stat-time').textContent = timeStr;
         }
 
-        function loadProject(id) {
+        function loadProject(id, isUndo = false) {
+            if (!isUndo) {
+                undoStack = []; // 只有在正常的切換專案時，才清空復原歷史
+            }
             currentProjectId = id;
             saveToLocal();
             const proj = projects[id];
@@ -659,7 +725,6 @@
                 <textarea id="poi-desc" placeholder="輸入介紹/備註..." class="w-full border border-gray-300 rounded p-1.5 text-xs outline-none focus:border-[#5c7042] mt-1 resize-none" rows="2">${mData.desc || ''}</textarea>
                 
                 <div class="text-[10px] text-gray-500 mt-1 px-1">選擇圖示：</div>
-                <!-- 修正：將 justify-between 改為 flex-wrap 讓多出的圖示可以自動換行排版 -->
                 <div class="flex gap-2 flex-wrap px-1" id="icon-picker">
                     ${['mountain', 'star', 'google-pin', 'P', 'wc', 'tent', 'bus-front'].map(icon => `
                         <button class="w-7 h-7 rounded-lg flex items-center justify-center icon-btn transition ${mData.icon === icon || (!mData.icon && icon === 'mountain') ? 'ring-2 ring-offset-1 ring-gray-400 bg-gray-200' : 'bg-gray-100 opacity-60 hover:opacity-100'}" data-icon="${icon}">
@@ -762,6 +827,7 @@
                     div.querySelector('.btn-edit').onclick = () => popup.setDOMContent(showEditMode());
                     div.querySelector('.btn-delete').onclick = () => {
                         if (confirm(`確定要刪除地標「${mData.name}」嗎？`)) {
+                            saveStateForUndo(); // 刪除前備份
                             if (targetMarker && targetMarker.id === mData.id) targetMarker = null;
                             marker.remove();
                             projects[currentProjectId].markers = projects[currentProjectId].markers.filter(m => m.id !== mData.id);
@@ -775,6 +841,7 @@
             function showEditMode() {
                 return buildMarkerEditorForm(mData, 
                     (updatedData) => {
+                        saveStateForUndo(); // 編輯存檔前備份
                         const index = projects[currentProjectId].markers.findIndex(m => m.id === mData.id);
                         if (index !== -1) {
                             projects[currentProjectId].markers[index] = updatedData;
@@ -791,6 +858,10 @@
             marker.setPopup(popup);
 
             if (!isViewOnly) {
+                // 拖曳地標也要可以復原
+                marker.on('dragstart', () => {
+                    saveStateForUndo(); // 拖曳開始前先備份當下位置
+                });
                 marker.on('dragend', () => {
                     const lngLat = marker.getLngLat();
                     mData.lat = lngLat.lat;
@@ -850,6 +921,7 @@
         }
 
         function saveImportedData(parsedPts, routeName, importedMarkers = []) {
+            saveStateForUndo(); // 匯入覆蓋前備份
             const result = recalculateRouteData(parsedPts);
             const thinnedData = thinRouteData(result.routePoints);
 
@@ -968,6 +1040,8 @@
             const proj = projects[currentProjectId];
             if (!proj || !proj.routePoints || proj.routePoints.length < 2) return;
             
+            saveStateForUndo(); // 備份
+            
             // 擷取目前所選取的路線段落
             const originalSegment = proj.routePoints.slice(tempTrimStart, tempTrimEnd + 1);
             
@@ -1002,6 +1076,8 @@
             const proj = projects[currentProjectId];
             if (!proj || !proj.routePoints || proj.routePoints.length < 2) return;
             
+            saveStateForUndo(); // 備份
+            
             // 反轉原本的原始點陣列，然後重新計算累計距離與爬升
             let reversedRaw = [...proj.routePoints].reverse();
             const result = recalculateRouteData(reversedRaw);
@@ -1022,6 +1098,9 @@
 
         function applyRouteEdit() {
             const proj = projects[currentProjectId];
+            
+            saveStateForUndo(); // 備份
+            
             // 擷取使用者選取的段落，並重新計算該段的數據
             const slicedRaw = proj.routePoints.slice(tempTrimStart, tempTrimEnd + 1);
             const result = recalculateRouteData(slicedRaw);
@@ -1298,6 +1377,7 @@
             
             const formDOM = buildMarkerEditorForm(newMarkerData, 
                 (finalData) => {
+                    saveStateForUndo(); // 新增地標前備份
                     projects[currentProjectId].markers.push(finalData);
                     saveToLocal();
                     renderMarker(finalData);
@@ -1362,15 +1442,14 @@
             if (name && name.trim()) {
                 const newId = 'proj_' + Date.now();
                 projects[newId] = { id: newId, name: name.trim(), routePoints: [], markers: [] };
-                currentProjectId = newId;
-                saveToLocal();
-                loadProject(newId);
+                loadProject(newId); // 切換專案會自動清空 undoStack 並儲存
                 renderProjectList();
             }
         }
         function renameProject(id) {
             const newName = prompt('重新命名專案：', projects[id].name);
             if (newName && newName.trim()) {
+                if (id === currentProjectId) saveStateForUndo();
                 projects[id].name = newName.trim();
                 saveToLocal();
                 renderProjectList();
