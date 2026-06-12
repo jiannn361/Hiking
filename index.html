@@ -378,6 +378,7 @@
             zoom: 13,
             attributionControl: true
         });
+
         let currentMapStyle = 'satellite-pure';
         const styles = ['topo', 'standard', 'satellite', 'satellite-pure'];
         const styleNames = { topo: '地形', standard: '標準', satellite: '衛星+標籤', 'satellite-pure': '純衛星(乾淨)' };
@@ -644,7 +645,7 @@
 
         function loadProject(id, isUndo = false) {
             if (!isUndo) {
-                undoStack = []; // 只有在正常的切換專案時，才清空復原歷史
+                undoStack = []; 
             }
             currentProjectId = id;
             saveToLocal();
@@ -686,16 +687,20 @@
         function buildMarkerEditorForm(mData, onSave, onCancel) {
             const div = document.createElement('div');
             div.className = "flex flex-col gap-2 min-w-[220px] p-1";
+            
+            // 新增 'start' (起) 與 'end' (終) 圖標至選單
             div.innerHTML = `
                 <input type="text" id="poi-name" value="${mData.name || ''}" placeholder="輸入地標名稱" class="w-full border-b border-gray-300 py-1 px-1 text-sm bg-transparent outline-none text-gray-800 font-bold focus:border-[#5c7042]">
                 <textarea id="poi-desc" placeholder="輸入介紹/備註..." class="w-full border border-gray-300 rounded p-1.5 text-xs outline-none focus:border-[#5c7042] mt-1 resize-none" rows="2">${mData.desc || ''}</textarea>
                 
                 <div class="text-[10px] text-gray-500 mt-1 px-1">選擇圖示：</div>
                 <div class="flex gap-2 flex-wrap px-1" id="icon-picker">
-                    ${['mountain', 'star', 'google-pin', 'P', 'wc', 'tent', 'bus-front'].map(icon => `
+                    ${['mountain', 'star', 'google-pin', 'P', 'wc', 'tent', 'bus-front', 'start', 'end'].map(icon => `
                         <button class="w-7 h-7 rounded-lg flex items-center justify-center icon-btn transition ${mData.icon === icon || (!mData.icon && icon === 'mountain') ? 'ring-2 ring-offset-1 ring-gray-400 bg-gray-200' : 'bg-gray-100 opacity-60 hover:opacity-100'}" data-icon="${icon}">
                             ${icon === 'P' ? '<span class="text-[12px] font-black text-gray-700 pointer-events-none">P</span>' : 
                               icon === 'wc' ? '<span class="text-[10px] font-black text-gray-700 pointer-events-none">WC</span>' : 
+                              icon === 'start' ? '<span class="text-[12px] font-black text-gray-700 pointer-events-none">起</span>' : 
+                              icon === 'end' ? '<span class="text-[12px] font-black text-gray-700 pointer-events-none">終</span>' : 
                               icon === 'google-pin' ? '<svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-gray-700 pointer-events-none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>' :
                               `<i data-lucide="${icon}" class="w-4 h-4 text-gray-700 pointer-events-none"></i>`}
                         </button>
@@ -752,6 +757,8 @@
             const iconName = mData.icon || 'google-pin';
             if (iconName === 'wc') el.innerHTML = `<span style="font-size: 11px; font-weight: 900; line-height: 1;">WC</span>`;
             else if (iconName === 'P') el.innerHTML = `<span style="font-size: 13px; font-weight: 900; line-height: 1;">P</span>`;
+            else if (iconName === 'start') el.innerHTML = `<span style="font-size: 13px; font-weight: 900; line-height: 1;">起</span>`;
+            else if (iconName === 'end') el.innerHTML = `<span style="font-size: 13px; font-weight: 900; line-height: 1;">終</span>`;
             else if (iconName === 'google-pin') el.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`;
             else el.innerHTML = `<i data-lucide="${iconName}" class="w-4 h-4"></i>`;
             
@@ -793,7 +800,7 @@
                     div.querySelector('.btn-edit').onclick = () => popup.setDOMContent(showEditMode());
                     div.querySelector('.btn-delete').onclick = () => {
                         if (confirm(`確定要刪除地標「${mData.name}」嗎？`)) {
-                            saveStateForUndo(); // 刪除前備份
+                            saveStateForUndo(); 
                             if (targetMarker && targetMarker.id === mData.id) targetMarker = null;
                             marker.remove();
                             projects[currentProjectId].markers = projects[currentProjectId].markers.filter(m => m.id !== mData.id);
@@ -807,7 +814,7 @@
             function showEditMode() {
                 return buildMarkerEditorForm(mData, 
                     (updatedData) => {
-                        saveStateForUndo(); // 編輯存檔前備份
+                        saveStateForUndo(); 
                         const index = projects[currentProjectId].markers.findIndex(m => m.id === mData.id);
                         if (index !== -1) {
                             projects[currentProjectId].markers[index] = updatedData;
@@ -824,9 +831,8 @@
             marker.setPopup(popup);
 
             if (!isViewOnly) {
-                // 拖曳地標也要可以復原
                 marker.on('dragstart', () => {
-                    saveStateForUndo(); // 拖曳開始前先備份當下位置
+                    saveStateForUndo(); 
                 });
                 marker.on('dragend', () => {
                     const lngLat = marker.getLngLat();
@@ -865,7 +871,6 @@
             return points.filter((_, index) => index % step === 0 || index === points.length - 1);
         }
 
-        // 共用：重新計算路線總長與爬升高度 (用於匯入與裁切路線)
         function recalculateRouteData(rawPoints) {
             let totalDist = 0;
             let lastPoint = null;
@@ -887,7 +892,7 @@
         }
 
         function saveImportedData(parsedPts, routeName, importedMarkers = []) {
-            saveStateForUndo(); // 匯入覆蓋前備份
+            saveStateForUndo(); 
             const result = recalculateRouteData(parsedPts);
             const thinnedData = thinRouteData(result.routePoints);
 
@@ -935,7 +940,6 @@
             startSlider.value = tempTrimStart;
             endSlider.value = tempTrimEnd;
 
-            // 建立紅色預覽裁切線
             if (map.getSource(tempPreviewSourceId)) {
                 map.removeLayer('route-preview-line');
                 map.removeSource(tempPreviewSourceId);
@@ -949,7 +953,6 @@
                 paint: { 'line-color': '#ef4444', 'line-width': 8, 'line-opacity': 0.9 }
             });
             
-            // 隱藏原本黃色路線以凸顯紅色選取段
             if (map.getLayer('route-line')) map.setLayoutProperty('route-line', 'visibility', 'none');
 
             updatePreviewUI();
@@ -1001,31 +1004,21 @@
             if (map.getLayer('route-line')) map.setLayoutProperty('route-line', 'visibility', 'visible');
         }
         
-        // 新增：將單程轉為往返路線 (A -> B -> A)
         function makeRoundTrip() {
             const proj = projects[currentProjectId];
             if (!proj || !proj.routePoints || proj.routePoints.length < 2) return;
             
-            saveStateForUndo(); // 備份
+            saveStateForUndo(); 
             
-            // 擷取目前所選取的路線段落
             const originalSegment = proj.routePoints.slice(tempTrimStart, tempTrimEnd + 1);
-            
-            // 將這個段落反轉 (並剔除第一個點以避免原地重複)
             const returnSegment = [...originalSegment].reverse().slice(1);
-            
-            // 合併：去程 + 回程
             const roundTripRaw = originalSegment.concat(returnSegment);
-            
-            // 重新計算合併後的距離、爬升、下降
             const result = recalculateRouteData(roundTripRaw);
             
-            // 更新專案資料
             projects[currentProjectId].routePoints = result.routePoints;
             projects[currentProjectId].totalAsc = result.totalAsc;
             projects[currentProjectId].totalDesc = result.totalDesc;
             
-            // 重置滑桿以涵蓋全新的往返路線長度
             tempTrimStart = 0;
             tempTrimEnd = result.routePoints.length - 1;
             document.getElementById('trim-start-slider').max = tempTrimEnd;
@@ -1042,9 +1035,8 @@
             const proj = projects[currentProjectId];
             if (!proj || !proj.routePoints || proj.routePoints.length < 2) return;
             
-            saveStateForUndo(); // 備份
+            saveStateForUndo(); 
             
-            // 反轉原本的原始點陣列，然後重新計算累計距離與爬升
             let reversedRaw = [...proj.routePoints].reverse();
             const result = recalculateRouteData(reversedRaw);
             
@@ -1052,7 +1044,6 @@
             projects[currentProjectId].totalAsc = result.totalAsc;
             projects[currentProjectId].totalDesc = result.totalDesc;
             
-            // 重設滑桿至極限並更新畫面
             tempTrimStart = 0;
             tempTrimEnd = result.routePoints.length - 1;
             document.getElementById('trim-start-slider').value = tempTrimStart;
@@ -1065,9 +1056,8 @@
         function applyRouteEdit() {
             const proj = projects[currentProjectId];
             
-            saveStateForUndo(); // 備份
+            saveStateForUndo(); 
             
-            // 擷取使用者選取的段落，並重新計算該段的數據
             const slicedRaw = proj.routePoints.slice(tempTrimStart, tempTrimEnd + 1);
             const result = recalculateRouteData(slicedRaw);
             
@@ -1343,7 +1333,7 @@
             
             const formDOM = buildMarkerEditorForm(newMarkerData, 
                 (finalData) => {
-                    saveStateForUndo(); // 新增地標前備份
+                    saveStateForUndo(); 
                     projects[currentProjectId].markers.push(finalData);
                     saveToLocal();
                     renderMarker(finalData);
@@ -1408,7 +1398,7 @@
             if (name && name.trim()) {
                 const newId = 'proj_' + Date.now();
                 projects[newId] = { id: newId, name: name.trim(), routePoints: [], markers: [] };
-                loadProject(newId); // 切換專案會自動清空 undoStack 並儲存
+                loadProject(newId); 
                 renderProjectList();
             }
         }
@@ -1524,6 +1514,15 @@
             }
         });
         
+        // 點擊返回上一頁的邏輯
+        function goBack() {
+            if (window.history.length > 1 || document.referrer) {
+                window.history.back();
+            } else {
+                window.close();
+            }
+        }
+
         function shareAppLink() {
             const proj = projects[currentProjectId];
             if (!proj || (!proj.routePoints.length && !proj.markers.length)) {
