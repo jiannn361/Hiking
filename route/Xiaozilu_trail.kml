@@ -7,35 +7,6 @@
       <LineString>
         <tessellate>1</tessellate>
         <coordinates>
-          120.607098,23.561102,964.865357
-          120.607075,23.561092,963.275589
-          120.607044,23.561075,962.526954
-          120.60701,23.561032,963.116092
-          120.606991,23.561002,965.127119
-          120.606969,23.560975,966.252486
-          120.606926,23.560959,966.269395
-          120.606887,23.560974,968.128594
-          120.606825,23.560994,965.203835
-          120.60677,23.56101,963.564929
-          120.606726,23.561028,963.095591
-          120.606693,23.561041,962.9072
-          120.606656,23.561049,963.11265
-          120.606602,23.561078,963.139556
-          120.606555,23.561069,963.861847
-          120.606517,23.561056,965.503182
-          120.60648,23.561054,964.153096
-          120.60645,23.561051,965.261564
-          120.606423,23.56104,965.206887
-          120.606355,23.561027,965.573211
-          120.606317,23.561026,965.611782
-          120.606261,23.561006,964.658065
-          120.606192,23.561,964.72416
-          120.606142,23.560984,964.763509
-          120.606075,23.560956,964.989008
-          120.606039,23.560929,966.51403
-          120.605995,23.560908,964.52874
-          120.605988,23.560887,964.505085
-          120.605986,23.560874,967.100838
           120.605984,23.560842,965.640984
           120.605986,23.560814,966.627466
           120.605993,23.560784,965.913319
@@ -588,17 +559,6 @@
     </Placemark>
     <Placemark>
       <name>步道出入口</name>
-      <description>一抹紅趣藝術裝置海拔高度：974 公尺</description>
-      <ExtendedData>
-        <Data name="icon"><value>map-pin</value></Data>
-        <Data name="color"><value>#3b82f6</value></Data>
-      </ExtendedData>
-      <Point>
-        <coordinates>120.60332,23.55936,0</coordinates>
-      </Point>
-    </Placemark>
-    <Placemark>
-      <name>步道出入口</name>
       <description>竹林茶坊</description>
       <ExtendedData>
         <Data name="icon"><value>map-pin</value></Data>
@@ -613,7 +573,7 @@
       <description></description>
       <ExtendedData>
         <Data name="icon"><value>wc</value></Data>
-        <Data name="color"><value>#10b981</value></Data>
+        <Data name="color"><value>#eab308</value></Data>
       </ExtendedData>
       <Point>
         <coordinates>120.60597363904026,23.56084187867306,0</coordinates>
@@ -638,7 +598,7 @@
         <Data name="color"><value>#eab308</value></Data>
       </ExtendedData>
       <Point>
-        <coordinates>120.603316,23.55936,0</coordinates>
+        <coordinates>120.60330440980073,23.559299134040373,0</coordinates>
       </Point>
     </Placemark>
     <Placemark>
@@ -661,6 +621,28 @@
       </ExtendedData>
       <Point>
         <coordinates>120.60633608069037,23.561312245293337,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>起點|Start</name>
+      <description></description>
+      <ExtendedData>
+        <Data name="icon"><value>start</value></Data>
+        <Data name="color"><value>#10b981</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.60596945409031,23.560782091683805,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>終點|End</name>
+      <description></description>
+      <ExtendedData>
+        <Data name="icon"><value>end</value></Data>
+        <Data name="color"><value>#e27653</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.60332904137653,23.559248395428114,0</coordinates>
       </Point>
     </Placemark>
   </Document>

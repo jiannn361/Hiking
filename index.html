@@ -695,7 +695,8 @@
                 
                 <div class="text-[10px] text-gray-500 mt-1 px-1">選擇圖示：</div>
                 <div class="flex gap-2 flex-wrap px-1" id="icon-picker">
-                    ${['mountain', 'star', 'google-pin', 'P', 'wc', 'tent', 'bus-front', 'start', 'end'].map(icon => `
+                    <!-- 這裡新增了 triangle-alert, hammer, traffic-cone 三個整修警告相關的圖示 -->
+                    ${['mountain', 'star', 'google-pin', 'P', 'wc', 'tent', 'bus-front', 'triangle-alert', 'hammer', 'traffic-cone', 'start', 'end'].map(icon => `
                         <button class="w-7 h-7 rounded-lg flex items-center justify-center icon-btn transition ${mData.icon === icon || (!mData.icon && icon === 'mountain') ? 'ring-2 ring-offset-1 ring-gray-400 bg-gray-200' : 'bg-gray-100 opacity-60 hover:opacity-100'}" data-icon="${icon}">
                             ${icon === 'P' ? '<span class="text-[12px] font-black text-gray-700 pointer-events-none">P</span>' : 
                               icon === 'wc' ? '<span class="text-[10px] font-black text-gray-700 pointer-events-none">WC</span>' : 

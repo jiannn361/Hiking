@@ -1028,7 +1028,7 @@
       <description>餐廳</description>
       <ExtendedData>
         <Data name="icon"><value>star</value></Data>
-        <Data name="color"><value>#3b82f6</value></Data>
+        <Data name="color"><value>#eab308</value></Data>
       </ExtendedData>
       <Point>
         <coordinates>120.6187712,23.5843052,0</coordinates>
@@ -1050,7 +1050,7 @@
       <description></description>
       <ExtendedData>
         <Data name="icon"><value>wc</value></Data>
-        <Data name="color"><value>#10b981</value></Data>
+        <Data name="color"><value>#eab308</value></Data>
       </ExtendedData>
       <Point>
         <coordinates>120.6172841,23.5768899,0</coordinates>
@@ -1061,10 +1061,21 @@
       <description>⟡主祀玄天上帝（上帝公）⟡創建於清咸豐四年（1854年），至今已有百年以上歷史</description>
       <ExtendedData>
         <Data name="icon"><value>star</value></Data>
-        <Data name="color"><value>#3b82f6</value></Data>
+        <Data name="color"><value>#eab308</value></Data>
       </ExtendedData>
       <Point>
         <coordinates>120.6170942,23.5772771,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>起點|Start</name>
+      <description></description>
+      <ExtendedData>
+        <Data name="icon"><value>start</value></Data>
+        <Data name="color"><value>#10b981</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.61662531464555,23.576974002492776,0</coordinates>
       </Point>
     </Placemark>
   </Document>

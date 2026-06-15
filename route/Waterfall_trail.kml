@@ -320,14 +320,14 @@
       </LineString>
     </Placemark>
     <Placemark>
-      <name>起點/終點</name>
+      <name>起點|Start</name>
       <description></description>
       <ExtendedData>
-        <Data name="icon"><value>google-pin</value></Data>
-        <Data name="color"><value>#e27653</value></Data>
+        <Data name="icon"><value>start</value></Data>
+        <Data name="color"><value>#10b981</value></Data>
       </ExtendedData>
       <Point>
-        <coordinates>120.63288322280846,23.5498516559377,0</coordinates>
+        <coordinates>120.63277922666856,23.54986025491708,0</coordinates>
       </Point>
     </Placemark>
     <Placemark>
@@ -338,7 +338,7 @@
         <Data name="color"><value>#3b82f6</value></Data>
       </ExtendedData>
       <Point>
-        <coordinates>120.6329604,23.5497747,0</coordinates>
+        <coordinates>120.63294778968543,23.549685575691825,0</coordinates>
       </Point>
     </Placemark>
     <Placemark>
@@ -371,7 +371,7 @@
         <Data name="color"><value>#3b82f6</value></Data>
       </ExtendedData>
       <Point>
-        <coordinates>120.6389594,23.553226,0</coordinates>
+        <coordinates>120.63895832287966,23.553263863528045,0</coordinates>
       </Point>
     </Placemark>
     <Placemark>
@@ -383,6 +383,17 @@
       </ExtendedData>
       <Point>
         <coordinates>120.6385115,23.5527736,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>終點|End</name>
+      <description></description>
+      <ExtendedData>
+        <Data name="icon"><value>end</value></Data>
+        <Data name="color"><value>#e27653</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.63296977633456,23.549887128678506,0</coordinates>
       </Point>
     </Placemark>
   </Document>

@@ -214,11 +214,11 @@
       <name>太平雲梯服務中心</name>
       <description></description>
       <ExtendedData>
-        <Data name="icon"><value>map-pin</value></Data>
+        <Data name="icon"><value>star</value></Data>
         <Data name="color"><value>#eab308</value></Data>
       </ExtendedData>
       <Point>
-        <coordinates>120.60013749981408,23.559523580220855,0</coordinates>
+        <coordinates>120.60015479463237,23.559592652071785,0</coordinates>
       </Point>
     </Placemark>
     <Placemark>
@@ -248,7 +248,7 @@
       <description></description>
       <ExtendedData>
         <Data name="icon"><value>map-pin</value></Data>
-        <Data name="color"><value>#e27653</value></Data>
+        <Data name="color"><value>#eab308</value></Data>
       </ExtendedData>
       <Point>
         <coordinates>120.60175490229733,23.558875544409673,0</coordinates>
@@ -280,7 +280,7 @@
       <name>洗手間</name>
       <description></description>
       <ExtendedData>
-        <Data name="icon"><value>map-pin</value></Data>
+        <Data name="icon"><value>wc</value></Data>
         <Data name="color"><value>#eab308</value></Data>
       </ExtendedData>
       <Point>
@@ -299,17 +299,6 @@
       </Point>
     </Placemark>
     <Placemark>
-      <name>電車充電樁</name>
-      <description></description>
-      <ExtendedData>
-        <Data name="icon"><value>star</value></Data>
-        <Data name="color"><value>#3b82f6</value></Data>
-      </ExtendedData>
-      <Point>
-        <coordinates>120.60009927246568,23.559625199361292,0</coordinates>
-      </Point>
-    </Placemark>
-    <Placemark>
       <name>太平雲梯</name>
       <description></description>
       <ExtendedData>
@@ -324,7 +313,7 @@
       <name>太平雲梯入口| Entrance</name>
       <description></description>
       <ExtendedData>
-        <Data name="icon"><value>map-pin</value></Data>
+        <Data name="icon"><value>google-pin</value></Data>
         <Data name="color"><value>#e27653</value></Data>
       </ExtendedData>
       <Point>
@@ -336,7 +325,7 @@
       <description></description>
       <ExtendedData>
         <Data name="icon"><value>map-pin</value></Data>
-        <Data name="color"><value>#e27653</value></Data>
+        <Data name="color"><value>#eab308</value></Data>
       </ExtendedData>
       <Point>
         <coordinates>120.5975899,23.5580143,0</coordinates>
@@ -347,7 +336,7 @@
       <description></description>
       <ExtendedData>
         <Data name="icon"><value>map-pin</value></Data>
-        <Data name="color"><value>#e27653</value></Data>
+        <Data name="color"><value>#eab308</value></Data>
       </ExtendedData>
       <Point>
         <coordinates>120.5975888,23.5570545,0</coordinates>
@@ -358,7 +347,7 @@
       <description></description>
       <ExtendedData>
         <Data name="icon"><value>map-pin</value></Data>
-        <Data name="color"><value>#e27653</value></Data>
+        <Data name="color"><value>#eab308</value></Data>
       </ExtendedData>
       <Point>
         <coordinates>120.60040165331492,23.55818873540501,0</coordinates>
@@ -377,7 +366,7 @@
     </Placemark>
     <Placemark>
       <name>步道出口</name>
-      <description></description>
+      <description>只出不進</description>
       <ExtendedData>
         <Data name="icon"><value>map-pin</value></Data>
         <Data name="color"><value>#e27653</value></Data>
@@ -391,21 +380,21 @@
       <description></description>
       <ExtendedData>
         <Data name="icon"><value>wc</value></Data>
-        <Data name="color"><value>#10b981</value></Data>
+        <Data name="color"><value>#eab308</value></Data>
       </ExtendedData>
       <Point>
         <coordinates>120.60025600473995,23.559548109041543,0</coordinates>
       </Point>
     </Placemark>
     <Placemark>
-      <name>洗手間</name>
+      <name>太平老街</name>
       <description></description>
       <ExtendedData>
-        <Data name="icon"><value>map-pin</value></Data>
-        <Data name="color"><value>#eab308</value></Data>
+        <Data name="icon"><value>star</value></Data>
+        <Data name="color"><value>#3b82f6</value></Data>
       </ExtendedData>
       <Point>
-        <coordinates>120.6029625,23.5607526,0</coordinates>
+        <coordinates>120.60429294715505,23.560988584146486,0</coordinates>
       </Point>
     </Placemark>
     <Placemark>
@@ -450,6 +439,28 @@
       </ExtendedData>
       <Point>
         <coordinates>120.6016066805999,23.56034490456365,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>起點|Start</name>
+      <description></description>
+      <ExtendedData>
+        <Data name="icon"><value>start</value></Data>
+        <Data name="color"><value>#10b981</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.60013716491687,23.55949478829882,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>終點|End</name>
+      <description></description>
+      <ExtendedData>
+        <Data name="icon"><value>end</value></Data>
+        <Data name="color"><value>#e27653</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.6003051555665,23.559483649524765,0</coordinates>
       </Point>
     </Placemark>
   </Document>

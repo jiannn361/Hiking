@@ -589,14 +589,14 @@
       </LineString>
     </Placemark>
     <Placemark>
-      <name>步道出入口2</name>
+      <name>嘉154與162甲線交叉口</name>
       <description></description>
       <ExtendedData>
-        <Data name="icon"><value>map-pin</value></Data>
-        <Data name="color"><value>#e27653</value></Data>
+        <Data name="icon"><value>google-pin</value></Data>
+        <Data name="color"><value>#eab308</value></Data>
       </ExtendedData>
       <Point>
-        <coordinates>120.6120368,23.5619028,0</coordinates>
+        <coordinates>120.60857307188121,23.56017772681878,0</coordinates>
       </Point>
     </Placemark>
     <Placemark>
@@ -633,17 +633,6 @@
       </Point>
     </Placemark>
     <Placemark>
-      <name>嘉154與162甲線交叉口</name>
-      <description></description>
-      <ExtendedData>
-        <Data name="icon"><value>map-pin</value></Data>
-        <Data name="color"><value>#3b82f6</value></Data>
-      </ExtendedData>
-      <Point>
-        <coordinates>120.60857,23.560131,0</coordinates>
-      </Point>
-    </Placemark>
-    <Placemark>
       <name>步道出入口1</name>
       <description></description>
       <ExtendedData>
@@ -663,6 +652,83 @@
       </ExtendedData>
       <Point>
         <coordinates>120.6125471,23.5620104,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>仙腳印</name>
+      <description></description>
+      <ExtendedData>
+        <Data name="icon"><value>star</value></Data>
+        <Data name="color"><value>#3b82f6</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.6120247,23.5621621,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>玉螺洞</name>
+      <description></description>
+      <ExtendedData>
+        <Data name="icon"><value>star</value></Data>
+        <Data name="color"><value>#3b82f6</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.612019,23.562214,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>步道出入口3</name>
+      <description></description>
+      <ExtendedData>
+        <Data name="icon"><value>map-pin</value></Data>
+        <Data name="color"><value>#eab308</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.609558,23.560338,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>起點|Start</name>
+      <description></description>
+      <ExtendedData>
+        <Data name="icon"><value>start</value></Data>
+        <Data name="color"><value>#10b981</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.61205182646609,23.561909179913755,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>步道出入口1</name>
+      <description></description>
+      <ExtendedData>
+        <Data name="icon"><value>map-pin</value></Data>
+        <Data name="color"><value>#eab308</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.611919,23.562497,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>停車處</name>
+      <description></description>
+      <ExtendedData>
+        <Data name="icon"><value>P</value></Data>
+        <Data name="color"><value>#3b82f6</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.6125471,23.5620104,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>終點|End</name>
+      <description></description>
+      <ExtendedData>
+        <Data name="icon"><value>end</value></Data>
+        <Data name="color"><value>#e27653</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.61245372949838,23.562029139690324,0</coordinates>
       </Point>
     </Placemark>
   </Document>

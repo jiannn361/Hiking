@@ -7,13 +7,6 @@
       <LineString>
         <tessellate>1</tessellate>
         <coordinates>
-          120.65961,23.529367,844
-          120.659615,23.529224,851
-          120.659607,23.529081,852
-          120.659575,23.528974,849
-          120.659476,23.528929,848
-          120.659351,23.528955,848
-          120.659261,23.529,848
           120.659204,23.529003,849
           120.65919,23.528877,848
           120.659175,23.528744,848
@@ -166,35 +159,30 @@
           120.659196,23.528782,851
           120.659183,23.528883,853
           120.659177,23.528992,855
-          120.659331,23.528998,862
-          120.659405,23.528926,860
-          120.659537,23.528938,854
-          120.659529,23.52903,855
-          120.65961,23.529075,853
         </coordinates>
       </LineString>
     </Placemark>
     <Placemark>
       <name>停車場</name>
-      <description>半小時/$25
-當日最高上限/</description>
+      <description>半小時 / $25
+當日最高上限 / $200</description>
       <ExtendedData>
         <Data name="icon"><value>P</value></Data>
         <Data name="color"><value>#3b82f6</value></Data>
       </ExtendedData>
       <Point>
-        <coordinates>120.659607,23.529353,0</coordinates>
+        <coordinates>120.65957825277906,23.529408300074934,0</coordinates>
       </Point>
     </Placemark>
     <Placemark>
-      <name>圓潭自然生態園區入口</name>
-      <description></description>
+      <name>起點|Start</name>
+      <description>圓潭自然生態園區入口</description>
       <ExtendedData>
-        <Data name="icon"><value>google-pin</value></Data>
-        <Data name="color"><value>#e27653</value></Data>
+        <Data name="icon"><value>start</value></Data>
+        <Data name="color"><value>#10b981</value></Data>
       </ExtendedData>
       <Point>
-        <coordinates>120.659204,23.529003,0</coordinates>
+        <coordinates>120.65913992140543,23.52900194203812,0</coordinates>
       </Point>
     </Placemark>
     <Placemark>
@@ -245,8 +233,8 @@
       <name>植物園</name>
       <description></description>
       <ExtendedData>
-        <Data name="icon"><value>google-pin</value></Data>
-        <Data name="color"><value>#e27653</value></Data>
+        <Data name="icon"><value>star</value></Data>
+        <Data name="color"><value>#10b981</value></Data>
       </ExtendedData>
       <Point>
         <coordinates>120.65934411923234,23.52496627561011,0</coordinates>
@@ -271,7 +259,7 @@
         <Data name="color"><value>#10b981</value></Data>
       </ExtendedData>
       <Point>
-        <coordinates>120.659216,23.528486,0</coordinates>
+        <coordinates>120.65907615801183,23.528581337646372,0</coordinates>
       </Point>
     </Placemark>
     <Placemark>
@@ -282,7 +270,7 @@
         <Data name="color"><value>#10b981</value></Data>
       </ExtendedData>
       <Point>
-        <coordinates>120.659197,23.528587,0</coordinates>
+        <coordinates>120.65906734256748,23.528452530816878,0</coordinates>
       </Point>
     </Placemark>
     <Placemark>
@@ -294,6 +282,28 @@
       </ExtendedData>
       <Point>
         <coordinates>120.65978304407861,23.52626214468569,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>終點|End</name>
+      <description>圓潭自然生態園區入口</description>
+      <ExtendedData>
+        <Data name="icon"><value>end</value></Data>
+        <Data name="color"><value>#e27653</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.6592293157994,23.52900194207838,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>雲潭瀑布站</name>
+      <description>꒰7315/7315A꒱ — 一天兩班</description>
+      <ExtendedData>
+        <Data name="icon"><value>bus-front</value></Data>
+        <Data name="color"><value>#3b82f6</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.65620148465268,23.531709526321706,0</coordinates>
       </Point>
     </Placemark>
   </Document>

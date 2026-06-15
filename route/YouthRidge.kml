@@ -7,15 +7,6 @@
       <LineString>
         <tessellate>1</tessellate>
         <coordinates>
-          120.6559058,23.5317338,875
-          120.6559349,23.5317336,894.334716796875
-          120.65595194146879,23.53172994882229,875
-          120.65603388651691,23.531742382541278,876
-          120.65609452708267,23.531747297717658,876
-          120.65614658105729,23.531756589199055,876
-          120.6562039500923,23.531765505269984,876
-          120.6562675492554,23.53176879254531,870
-          120.65634108108111,23.531769244224893,870
           120.6564186107918,23.531754617584806,870
           120.65642700318965,23.531776100510726,870
           120.65645851909679,23.53180233329763,853
@@ -609,11 +600,11 @@
         <Data name="color"><value>#3b82f6</value></Data>
       </ExtendedData>
       <Point>
-        <coordinates>120.6562556944906,23.531730142185438,0</coordinates>
+        <coordinates>120.65626216339268,23.531700139833333,0</coordinates>
       </Point>
     </Placemark>
     <Placemark>
-      <name>停車場</name>
+      <name>步道停車場</name>
       <description></description>
       <ExtendedData>
         <Data name="icon"><value>P</value></Data>
@@ -632,6 +623,28 @@
       </ExtendedData>
       <Point>
         <coordinates>120.65567562143849,23.531749280879268,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>起點|Start</name>
+      <description></description>
+      <ExtendedData>
+        <Data name="icon"><value>start</value></Data>
+        <Data name="color"><value>#10b981</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.65641727913231,23.531750992153817,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>終點|End</name>
+      <description></description>
+      <ExtendedData>
+        <Data name="icon"><value>end</value></Data>
+        <Data name="color"><value>#e27653</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.66537642856099,23.539160575458183,0</coordinates>
       </Point>
     </Placemark>
   </Document>
