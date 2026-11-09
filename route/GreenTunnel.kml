@@ -1037,7 +1037,7 @@
       </LineString>
     </Placemark>
     <Placemark>
-      <name>停車場</name>
+      <name>綠色隧道停車場</name>
       <description></description>
       <ExtendedData>
         <Data name="icon"><value>P</value></Data>
@@ -1049,7 +1049,7 @@
     </Placemark>
     <Placemark>
       <name>源興宮站</name>
-      <description>7315/7315A ꒰每日兩班꒱</description>
+      <description>꒰7315/7315A ꒱— 每日兩班</description>
       <ExtendedData>
         <Data name="icon"><value>bus-front</value></Data>
         <Data name="color"><value>#3b82f6</value></Data>
@@ -1060,7 +1060,7 @@
     </Placemark>
     <Placemark>
       <name>青葉山莊站</name>
-      <description>7315/7315A ꒰每日兩班꒱</description>
+      <description>꒰7315/7315A ꒱— 每日兩班</description>
       <ExtendedData>
         <Data name="icon"><value>bus-front</value></Data>
         <Data name="color"><value>#3b82f6</value></Data>
@@ -1111,6 +1111,17 @@
       </ExtendedData>
       <Point>
         <coordinates>120.68650978191062,23.54485554601972,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>柑園站</name>
+      <description>꒰7315/7315A ꒱— 每日兩班</description>
+      <ExtendedData>
+        <Data name="icon"><value>bus-front</value></Data>
+        <Data name="color"><value>#3b82f6</value></Data>
+      </ExtendedData>
+      <Point>
+        <coordinates>120.66710651456168,23.539818464673772,0</coordinates>
       </Point>
     </Placemark>
   </Document>

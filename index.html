@@ -2,8 +2,10 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>輕量化登山地圖</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="探索梅山步道，查看路線、地標與海拔，並在手機上開啟 GPS 定位。">
+    <title>梅山登山地圖</title>
+    <script src="./trails.js" defer></script>
     
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -35,9 +37,35 @@
         
         #map {
             height: 100vh;
+            height: 100dvh;
             width: 100vw;
             z-index: 1;
         }
+
+        .map-header { top: max(12px, env(safe-area-inset-top)); }
+        .map-tools { top: calc(max(12px, env(safe-area-inset-top)) + 76px); max-height: calc(100dvh - 185px); overflow-y: auto; }
+        .map-actions { bottom: calc(20px + env(safe-area-inset-bottom)); }
+        .map-chart { bottom: calc(100px + env(safe-area-inset-bottom)); }
+        #trail-picker {
+            box-sizing: border-box;
+            width: min(calc(100% - 24px), 30rem);
+            max-height: calc(100dvh - 32px);
+            padding: 0;
+            border: 1px solid #fff;
+            border-radius: 24px;
+            background: #f5f2e9;
+            color: #303b29;
+            box-shadow: 0 18px 56px #232a2050;
+        }
+        #trail-picker::backdrop { background: #23301e85; }
+        .trail-header { position: sticky; top: 0; background: #f5f2e9; padding: 18px; border-bottom: 1px solid #dcded2; }
+        .trail-header h2 { font-size: 1.35rem; font-weight: 800; }
+        .trail-header p { margin: 4px 0 12px; font-size: .875rem; }
+        #trail-search { width: 100%; border: 1px solid #aab39f; border-radius: 10px; padding: 10px 12px; background: white; }
+        #trail-list { padding: 8px 18px 18px; }
+        #trail-list a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 6px; border-bottom: 1px solid #dcded2; text-decoration: none; font-weight: 600; }
+        #trail-list a:hover, #trail-list a:focus-visible { background: #e8eddf; }
+        #trail-empty { padding: 16px 24px; }
 
         /* GPS 定位點 */
         .user-location-marker {
@@ -111,8 +139,21 @@
     <!-- 地圖容器 -->
     <div id="map"></div>
 
+    <dialog id="trail-picker" aria-labelledby="trail-heading">
+        <div class="trail-header">
+            <form method="dialog" class="flex items-center justify-between gap-3">
+                <h2 id="trail-heading">梅山步道地圖</h2>
+                <button class="text-sm underline p-2" type="submit">查看地圖</button>
+            </form>
+            <p>選擇步道，查看軌跡、地標與海拔。</p>
+            <input id="trail-search" type="search" placeholder="搜尋步道或村名" aria-label="搜尋步道或村名">
+        </div>
+        <ul id="trail-list"></ul>
+        <p id="trail-empty" role="status" hidden>找不到符合的步道，請試試其他關鍵字。</p>
+    </dialog>
+
     <!-- 頂部資訊列 -->
-    <div class="ui-layer absolute top-10 left-0 right-0 px-4 flex justify-center pointer-events-none transition-all duration-500">
+    <div class="map-header ui-layer absolute left-0 right-0 px-4 flex justify-center pointer-events-none transition-all duration-500">
         <div class="bg-[#f0ece1]/90 backdrop-blur-lg rounded-[2rem] p-2 pr-5 flex items-center gap-3 pointer-events-auto border border-white/60 max-w-sm w-full shadow-lg">
             <div class="w-12 h-12 rounded-full bg-[#e8e4d9] flex items-center justify-center shrink-0 border-2 border-white/50 shadow-inner text-[#5c7042]">
                 <i data-lucide="mountain-snow" class="w-7 h-7"></i>
@@ -124,14 +165,15 @@
                     <span id="gps-status" class="text-[11px] text-[#6b725c] font-medium">尚未定位</span>
                 </div>
             </div>
-            <button onclick="shareAppLink()" class="w-9 h-9 flex items-center justify-center bg-white/60 rounded-full hover:bg-white transition text-[#6b725c] shrink-0 border border-white/60" title="產生與分享專屬連結">
+            <button id="open-trails" type="button" class="bg-white/80 rounded-full px-3 py-2 text-xs font-bold shrink-0" aria-haspopup="dialog">步道</button>
+            <button onclick="shareAppLink()" class="w-9 h-9 flex items-center justify-center bg-white/60 rounded-full hover:bg-white transition text-[#6b725c] shrink-0 border border-white/60" title="產生與分享專屬連結" aria-label="分享路線">
                 <i data-lucide="share" class="w-4 h-4"></i>
             </button>
         </div>
     </div>
 
     <!-- 右側工具列 (電腦版優化：移除高度限制以完整顯示) -->
-    <div class="ui-layer absolute top-28 right-4 flex flex-col gap-2.5 pointer-events-none items-end overflow-visible pb-4">
+    <div class="map-tools hide-scrollbar ui-layer absolute right-4 flex flex-col gap-2.5 pointer-events-none items-end pb-4">
         
         <!-- 縮放區塊 -->
         <div class="flex flex-col gap-1 bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-1 border border-white/60 shadow-md pointer-events-auto">
@@ -180,7 +222,7 @@
     </div>
 
     <!-- 底部高度圖表區 -->
-    <div class="ui-layer absolute bottom-28 left-0 right-0 px-4 pointer-events-none flex justify-center">
+    <div class="map-chart ui-layer absolute left-0 right-0 px-4 pointer-events-none flex justify-center">
         <div id="chart-panel" class="w-full max-w-sm bg-[#f0ece1]/95 backdrop-blur-xl rounded-[2rem] p-4 transform translate-y-[150%] opacity-0 transition-all duration-500 pointer-events-auto border border-white/60 shadow-2xl">
             <div class="flex justify-between items-center mb-2 px-2">
                 <span class="text-xs font-bold text-[#6b725c] uppercase tracking-wider">路線數據與高度</span>
@@ -225,7 +267,7 @@
     </div>
 
     <!-- 底部主控列 -->
-    <div class="ui-layer absolute bottom-8 left-0 right-0 flex justify-center pointer-events-none px-4">
+    <div class="map-actions ui-layer absolute left-0 right-0 flex justify-center pointer-events-none px-4">
         <div class="bg-[#f0ece1]/90 backdrop-blur-xl rounded-full px-6 py-3 flex justify-between items-center gap-6 pointer-events-auto border border-white/60 shadow-lg">
             <button onclick="toggleChart()" class="p-2 rounded-full hover:bg-white text-[#6b725c] transition"><i data-lucide="activity" class="w-6 h-6"></i></button>
             <button id="btn-locate" onclick="toggleGPS()" class="bg-[#e27653] text-white rounded-full px-8 py-3 flex items-center justify-center gap-2 hover:bg-[#d1613e] active:scale-95 transition-all shadow-md">
@@ -304,6 +346,9 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const isViewOnly = urlParams.get('view') === '1';
+        const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[char]);
         
         let projects = {};
         let currentProjectId = null;
@@ -351,6 +396,7 @@
         }
 
         function saveToLocal() {
+            if (isViewOnly) return;
             try {
                 localStorage.setItem('hiking_app_projects', JSON.stringify(projects));
                 localStorage.setItem('hiking_app_current_id', currentProjectId);
@@ -588,13 +634,15 @@
                             return res.blob();
                         })
                         .then(blob => {
-                            const filename = routeUrl.split('?')[0].split('/').pop() || 'auto-loaded.kml';
+                            const filename = new URL(routeUrl, location.href).pathname.split('/').pop() || 'auto-loaded.kml';
                             const file = new File([blob], filename, { type: blob.type });
                             processFile(file);
                         })
                         .catch(err => {
                             console.error("自動載入路線失敗:", err);
                             alert("自動載入失敗，可能檔案不存在或有跨域限制。");
+                            delete projects[stableId];
+                            loadProject(Object.keys(projects)[0]);
                             hideLoading();
                         });
                 }
@@ -648,7 +696,7 @@
                 undoStack = []; 
             }
             currentProjectId = id;
-            saveToLocal();
+            if (!isViewOnly) saveToLocal();
             const proj = projects[id];
             
             document.getElementById('route-title').textContent = proj.name;
@@ -690,8 +738,8 @@
             
             // 新增 'start' (起) 與 'end' (終) 圖標至選單
             div.innerHTML = `
-                <input type="text" id="poi-name" value="${mData.name || ''}" placeholder="輸入地標名稱" class="w-full border-b border-gray-300 py-1 px-1 text-sm bg-transparent outline-none text-gray-800 font-bold focus:border-[#5c7042]">
-                <textarea id="poi-desc" placeholder="輸入介紹/備註..." class="w-full border border-gray-300 rounded p-1.5 text-xs outline-none focus:border-[#5c7042] mt-1 resize-none" rows="2">${mData.desc || ''}</textarea>
+                <input type="text" id="poi-name" value="${escapeHTML(mData.name)}" placeholder="輸入地標名稱" class="w-full border-b border-gray-300 py-1 px-1 text-sm bg-transparent outline-none text-gray-800 font-bold focus:border-[#5c7042]">
+                <textarea id="poi-desc" placeholder="輸入介紹/備註..." class="w-full border border-gray-300 rounded p-1.5 text-xs outline-none focus:border-[#5c7042] mt-1 resize-none" rows="2">${escapeHTML(mData.desc)}</textarea>
                 
                 <div class="text-[10px] text-gray-500 mt-1 px-1">選擇圖示：</div>
                 <div class="flex gap-2 flex-wrap px-1" id="icon-picker">
@@ -761,7 +809,7 @@
             else if (iconName === 'start') el.innerHTML = `<span style="font-size: 13px; font-weight: 900; line-height: 1;">起</span>`;
             else if (iconName === 'end') el.innerHTML = `<span style="font-size: 13px; font-weight: 900; line-height: 1;">終</span>`;
             else if (iconName === 'google-pin') el.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`;
-            else el.innerHTML = `<i data-lucide="${iconName}" class="w-4 h-4"></i>`;
+            else el.innerHTML = `<i data-lucide="${escapeHTML(iconName)}" class="w-4 h-4"></i>`;
             
             setTimeout(() => lucide.createIcons({ root: el }), 0);
 
@@ -776,8 +824,8 @@
                 div.className = 'p-1 min-w-[150px]';
                 let isTarget = targetMarker && targetMarker.id === mData.id;
                 
-                let html = `<b class="text-sm px-1 text-gray-800 block">${mData.name} ${isTarget ? '🎯' : ''}</b>`;
-                if(mData.desc) html += `<p class="text-[11px] text-gray-600 px-1 mt-1 whitespace-pre-wrap">${mData.desc}</p>`;
+                let html = `<b class="text-sm px-1 text-gray-800 block">${escapeHTML(mData.name)} ${isTarget ? '🎯' : ''}</b>`;
+                if(mData.desc) html += `<p class="text-[11px] text-gray-600 px-1 mt-1 whitespace-pre-wrap">${escapeHTML(mData.desc)}</p>`;
                 
                 html += `<div class="flex gap-2 mt-2 pt-2 border-t border-gray-200 px-1">
                     <button class="text-xs ${isTarget ? 'text-gray-400' : 'text-blue-600'} font-bold hover:underline btn-target">${isTarget ? '已鎖定' : '設為目標'}</button>`;
@@ -1381,7 +1429,7 @@
 
                 div.innerHTML = `
                     <div class="flex flex-col">
-                        <span class="font-bold text-sm text-[#3e4433]">${proj.name}</span>
+                        <span class="font-bold text-sm text-[#3e4433]">${escapeHTML(proj.name)}</span>
                         <span class="text-[10px] text-gray-500">${proj.routePoints?.length || 0} 個軌跡點, ${proj.markers?.length || 0} 個地標</span>
                     </div>
                     <div class="flex gap-2">
@@ -1433,6 +1481,7 @@
         }
 
         function toggleGPS() {
+            if (!window.isSecureContext) return alert('請從 HTTPS 網址開啟地圖，以使用 GPS 定位。');
             if (!("geolocation" in navigator)) return alert("瀏覽器不支援 GPS");
             if (isTracking) {
                 navigator.geolocation.clearWatch(watchId);
@@ -1443,9 +1492,16 @@
             } else {
                 gpsStatus.textContent = "定位中...";
                 btnLocateText.textContent = "停止 Stop";
-                watchId = navigator.geolocation.watchPosition(updatePosition, () => {
-                    gpsStatus.textContent = "定位失敗"; gpsStatus.classList.remove('text-[#e27653]');
-                }, { enableHighAccuracy: true });
+                watchId = navigator.geolocation.watchPosition(updatePosition, error => {
+                    gpsStatus.textContent = error.code === 1 ? '未允許定位' : '暫時無法定位';
+                    gpsStatus.classList.remove('text-[#e27653]');
+                    if (error.code === 1) {
+                        navigator.geolocation.clearWatch(watchId);
+                        isTracking = false;
+                        btnLocateText.textContent = '開始 Start';
+                        alert('請在手機設定允許定位。若在 LINE 內仍無法定位，可從右上角選單改用瀏覽器開啟。');
+                    }
+                }, { enableHighAccuracy: true, timeout: 15000 });
                 isTracking = true;
             }
         }
@@ -1516,15 +1572,11 @@
         });
         
         // 點擊返回上一頁的邏輯
-        function goBack() {
-            if (window.history.length > 1 || document.referrer) {
-                window.history.back();
-            } else {
-                window.close();
-            }
-        }
-
         function shareAppLink() {
+            if (isViewOnly && urlParams.has('route')) {
+                copyShareUrl(location.href);
+                return;
+            }
             const proj = projects[currentProjectId];
             if (!proj || (!proj.routePoints.length && !proj.markers.length)) {
                 alert('目前沒有路線或地標可以分享！');
@@ -1554,24 +1606,22 @@
                     const compressed = LZString.compressToEncodedURIComponent(jsonString);
                     const shareUrl = window.location.origin + window.location.pathname + "?s=" + compressed + "&view=1";
                     
-                    const tempInput = document.createElement('textarea');
-                    tempInput.value = shareUrl;
-                    document.body.appendChild(tempInput);
-                    tempInput.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(tempInput);
-                    
-                    if (shareUrl.length > 2000) {
-                        alert('⚠️ 警告：您的地標或資料仍過多，網址超過 2000 字元！\n\n這可能會導致手機無法開啟。\n\n【建議改用】：請點擊右側的「匯出 KML」下載檔案，並上傳到您的伺服器，使用 ?route=檔案網址 的方式來載入！');
-                    } else {
-                        alert('✅ 已成功將路線打包並產生專屬連結！\n\n網址已自動精簡並複製，您可以直接「貼上」到您的導覽 App 按鈕網址設定中。');
-                    }
+                    copyShareUrl(shareUrl);
                 } catch(e) {
                     console.error(e);
                     alert('產生連結失敗，路線資料量過大。');
                 }
                 hideLoading();
             }, 100);
+        }
+
+        async function copyShareUrl(url) {
+            try {
+                await navigator.clipboard.writeText(url);
+                alert(url.length > 2000 ? '已複製。這個網址較長，分享前請先確認收件者能開啟。' : '已複製路線連結，可以貼到 LINE 分享。');
+            } catch {
+                prompt('請複製路線連結：', url);
+            }
         }
     </script>
 </body>
