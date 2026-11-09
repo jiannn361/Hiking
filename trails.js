@@ -55,5 +55,4 @@ function openTrails() {
 
 trailSearch.addEventListener('input', renderTrails);
 document.getElementById('open-trails').addEventListener('click', openTrails);
-const entryParams = new URLSearchParams(location.search);
-if (!entryParams.has('route') && !entryParams.has('s')) openTrails();
+if (isViewOnly && !urlParams.has('route') && !urlParams.has('s')) openTrails();

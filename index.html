@@ -42,6 +42,7 @@
             z-index: 1;
         }
 
+        #editor-controls-right[hidden] { display: none; }
         .map-header { top: max(12px, env(safe-area-inset-top)); }
         .map-tools { top: calc(max(12px, env(safe-area-inset-top)) + 76px); max-height: calc(100dvh - 185px); overflow-y: auto; }
         .map-actions { bottom: calc(20px + env(safe-area-inset-bottom)); }
@@ -191,7 +192,7 @@
             <span id="layer-name" class="text-[8px] font-bold mt-0.5 whitespace-nowrap truncate w-full text-center">純衛星</span>
         </button>
 
-        <div id="editor-controls-right" class="flex flex-col gap-2.5 pointer-events-none mt-1">
+        <div id="editor-controls-right" class="flex flex-col gap-2.5 pointer-events-none mt-1" hidden>
             <button onclick="openProjectModal()" class="bg-[#f0ece1]/90 backdrop-blur-md rounded-full p-3.5 hover:bg-white transition text-[#4a503d] pointer-events-auto border border-white/60 shadow-md flex flex-col items-center animate-fade-in" title="專案管理">
                 <i data-lucide="folder" class="w-5 h-5"></i>
             </button>
@@ -345,7 +346,8 @@
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        const isViewOnly = urlParams.get('view') === '1';
+        const isViewOnly = urlParams.get('view') === '1' || urlParams.get('edit') !== '1';
+        document.getElementById('editor-controls-right').hidden = isViewOnly;
         const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
         })[char]);
@@ -373,23 +375,25 @@
         }
 
         window.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+            if (!isViewOnly && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
                 if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
                 e.preventDefault();
                 undoLastAction();
             }
         });
 
-        try {
-            projects = JSON.parse(localStorage.getItem('hiking_app_projects')) || {};
-            currentProjectId = localStorage.getItem('hiking_app_current_id');
-        } catch (e) {
-            projects = {};
+        if (!isViewOnly) {
+            try {
+                projects = JSON.parse(localStorage.getItem('hiking_app_projects')) || {};
+                currentProjectId = localStorage.getItem('hiking_app_current_id');
+            } catch (e) {
+                projects = {};
+            }
         }
 
         if (Object.keys(projects).length === 0) {
             currentProjectId = 'proj_' + Date.now();
-            projects[currentProjectId] = { id: currentProjectId, name: '預設專案', routePoints: [], markers: [] };
+            projects[currentProjectId] = { id: currentProjectId, name: isViewOnly ? '梅山步道地圖' : '預設專案', routePoints: [], markers: [] };
             saveToLocal();
         } else if (!projects[currentProjectId]) {
             currentProjectId = Object.keys(projects)[0];
@@ -1565,10 +1569,6 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
-            if (isViewOnly) {
-                const rightControls = document.getElementById('editor-controls-right');
-                if (rightControls) rightControls.style.display = 'none';
-            }
         });
         
         // 點擊返回上一頁的邏輯
