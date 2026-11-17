@@ -90,18 +90,19 @@
         .user-location-marker {
             display: grid;
             place-items: center;
-            width: 48px;
-            height: 48px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
-            background-color: rgba(59, 130, 246, 0.16);
-            border: 1px solid rgba(59, 130, 246, 0.55);
+            background-color: rgba(240, 249, 255, 0.94);
+            border: 2px solid #3b82f6;
+            box-shadow: 0 0 0 2px white, 0 2px 7px rgba(30, 64, 175, 0.4);
             pointer-events: none;
             z-index: 1;
         }
 
         .user-location-marker img {
-            width: 42px;
-            height: 42px;
+            width: 50px;
+            height: 50px;
             object-fit: contain;
             filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
         }
@@ -770,6 +771,10 @@
 
             if (proj.markers) {
                 proj.markers.forEach(mData => renderMarker(mData));
+            }
+            if (isTracking && lastPosition) {
+                lastGpsCalcTime = 0;
+                updatePosition(lastPosition);
             }
         }
 
@@ -1531,6 +1536,8 @@
                 gpsStatus.textContent = "GPS 已暫停";
                 gpsStatus.classList.remove('text-[#e27653]');
             } else {
+                lastPosition = null;
+                lastGpsCalcTime = 0;
                 gpsStatus.textContent = "定位中...";
                 btnLocateText.textContent = "停止 Stop";
                 watchId = navigator.geolocation.watchPosition(updatePosition, error => {
@@ -1549,6 +1556,7 @@
 
         let lastGpsCalcTime = 0;
         let lastKnownHeight = null;
+        let isFarFromRoute = false;
         function updatePosition(position) {
             lastPosition = position;
             const lat = position.coords.latitude; const lng = position.coords.longitude;
@@ -1570,7 +1578,8 @@
                         const d = getDistance(lat, lng, p.lat, p.lng) * 1000;
                         if (d < minDist) { minDist = d; closestPoint = p; }
                     });
-                    if (closestPoint && minDist < 500) {
+                    isFarFromRoute = minDist >= 500;
+                    if (closestPoint && !isFarFromRoute) {
                         if(eleChart) {
                             eleChart.data.datasets[1].data = [{ x: closestPoint.dist, y: closestPoint.ele }];
                             eleChart.update('none');
@@ -1586,8 +1595,12 @@
                 }
             } else {
                 lastKnownHeight = null;
+                isFarFromRoute = false;
             }
 
+            if (isFarFromRoute) {
+                statusText = '已定位｜目前離這條步道較遠｜' + statusText;
+            }
             if (lastKnownHeight !== null) {
                 statusText += ` | 高: ${lastKnownHeight}m`;
             }
