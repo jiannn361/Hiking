@@ -473,8 +473,12 @@
         
         function initHoverMarker() {
             if (!chartHoverMarker) {
-                const el = document.createElement('div');
-                el.className = 'w-4 h-4 bg-[#3b82f6] border-2 border-white rounded-full shadow-md pointer-events-none';
+                const el = document.createElement('img');
+                el.src = './yunbao-marker.png';
+                el.alt = '';
+                el.width = 40;
+                el.height = 40;
+                el.className = 'pointer-events-none select-none drop-shadow-md';
                 el.style.display = 'none';
                 chartHoverMarker = new maplibregl.Marker({ element: el }).setLngLat([0, 0]).addTo(map);
             }
