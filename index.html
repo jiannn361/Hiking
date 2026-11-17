@@ -55,8 +55,8 @@
         .map-header { top: max(12px, env(safe-area-inset-top)); }
         .map-tools { top: calc(max(12px, env(safe-area-inset-top)) + 76px); max-height: calc(100dvh - 185px); overflow-y: auto; }
         .map-actions { bottom: calc(20px + env(safe-area-inset-bottom)); }
-        .map-chart { bottom: calc(100px + env(safe-area-inset-bottom)); }
-        #trail-picker {
+        #chart-panel.opacity-0 { visibility: hidden; }
+        #trail-picker, #map-guide {
             box-sizing: border-box;
             width: min(calc(100% - 24px), 30rem);
             max-height: calc(100dvh - 32px);
@@ -67,7 +67,7 @@
             color: #303b29;
             box-shadow: 0 18px 56px #232a2050;
         }
-        #trail-picker::backdrop { background: #23301e85; }
+        #trail-picker::backdrop, #map-guide::backdrop { background: #23301e85; }
         .trail-header { position: sticky; top: 0; background: #f5f2e9; padding: 18px; border-bottom: 1px solid #dcded2; }
         .trail-header h2 { font-size: 1.35rem; font-weight: 800; }
         .trail-header p { margin: 4px 0 12px; font-size: .875rem; }
@@ -256,43 +256,66 @@
         </div>
     </div>
 
-    <!-- 底部高度圖表區 -->
-    <div class="map-chart ui-layer absolute left-0 right-0 px-4 pointer-events-none flex justify-center">
-        <div id="chart-panel" class="w-full max-w-sm bg-[#f0ece1]/95 backdrop-blur-xl rounded-[2rem] p-4 transform translate-y-[150%] opacity-0 transition-all duration-500 pointer-events-auto border border-white/60 shadow-2xl">
-            <div class="flex justify-between items-center mb-2 px-2">
-                <span class="text-xs font-bold text-[#6b725c] uppercase tracking-wider">路線數據與高度</span>
-                <button onclick="toggleChart()" class="text-[#6b725c] hover:text-[#e27653] bg-white/50 rounded-full p-1 border border-white/50">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-            </div>
-            
-            <div class="flex gap-3 h-36 w-full">
-                <div class="grid grid-cols-2 grid-rows-2 gap-x-3 gap-y-2 content-center items-center bg-white/60 rounded-xl p-2 min-w-[110px] shrink-0 border border-white/50 shadow-sm">
-                    <div class="flex flex-col items-center" title="總距離">
-                        <i data-lucide="route" class="w-3 h-3 text-gray-500 mb-0.5"></i>
-                        <span id="stat-dist" class="text-xs font-black text-gray-800">--</span>
-                        <span class="text-[9px] text-gray-500">km</span>
+    <div class="map-actions ui-layer absolute left-0 right-0 px-3 flex flex-col items-center gap-2 pointer-events-none">
+        <!-- 底部高度圖表區 -->
+        <div class="w-full flex justify-center">
+            <div id="chart-panel" class="w-full max-w-sm bg-[#f0ece1]/95 backdrop-blur-xl rounded-[2rem] p-4 transform translate-y-[150%] opacity-0 transition-all duration-500 pointer-events-auto border border-white/60 shadow-2xl">
+                <div class="flex justify-between items-center mb-2 px-2">
+                    <span class="text-xs font-bold text-[#6b725c] uppercase tracking-wider">路線數據與高度</span>
+                    <button onclick="toggleChart()" class="text-[#6b725c] hover:text-[#e27653] bg-white/50 rounded-full p-1 border border-white/50">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <div class="flex gap-3 h-36 w-full">
+                    <div class="grid grid-cols-2 grid-rows-2 gap-x-3 gap-y-2 content-center items-center bg-white/60 rounded-xl p-2 min-w-[110px] shrink-0 border border-white/50 shadow-sm">
+                        <div class="flex flex-col items-center" title="總距離">
+                            <i data-lucide="route" class="w-3 h-3 text-gray-500 mb-0.5"></i>
+                            <span id="stat-dist" class="text-xs font-black text-gray-800">--</span>
+                            <span class="text-[9px] text-gray-500">km</span>
+                        </div>
+                        <div class="flex flex-col items-center" title="預估時間 (依據Naismith法則)">
+                            <i data-lucide="clock" class="w-3 h-3 text-blue-500 mb-0.5"></i>
+                            <span id="stat-time" class="text-xs font-black text-gray-800">--</span>
+                            <span class="text-[9px] text-gray-500">預估時間</span>
+                        </div>
+                        <div class="flex flex-col items-center" title="總爬升">
+                            <i data-lucide="trending-up" class="w-3 h-3 text-green-600 mb-0.5"></i>
+                            <span id="stat-asc" class="text-xs font-black text-green-700">--</span>
+                            <span class="text-[9px] text-gray-500">m</span>
+                        </div>
+                        <div class="flex flex-col items-center" title="總下降">
+                            <i data-lucide="trending-down" class="w-3 h-3 text-red-500 mb-0.5"></i>
+                            <span id="stat-desc" class="text-xs font-black text-red-600">--</span>
+                            <span class="text-[9px] text-gray-500">m</span>
+                        </div>
                     </div>
-                    <div class="flex flex-col items-center" title="預估時間 (依據Naismith法則)">
-                        <i data-lucide="clock" class="w-3 h-3 text-blue-500 mb-0.5"></i>
-                        <span id="stat-time" class="text-xs font-black text-gray-800">--</span>
-                        <span class="text-[9px] text-gray-500">預估時間</span>
-                    </div>
-                    <div class="flex flex-col items-center" title="總爬升">
-                        <i data-lucide="trending-up" class="w-3 h-3 text-green-600 mb-0.5"></i>
-                        <span id="stat-asc" class="text-xs font-black text-green-700">--</span>
-                        <span class="text-[9px] text-gray-500">m</span>
-                    </div>
-                    <div class="flex flex-col items-center" title="總下降">
-                        <i data-lucide="trending-down" class="w-3 h-3 text-red-500 mb-0.5"></i>
-                        <span id="stat-desc" class="text-xs font-black text-red-600">--</span>
-                        <span class="text-[9px] text-gray-500">m</span>
+                    <div class="flex-grow w-full h-full relative min-w-0">
+                        <canvas id="elevationChart"></canvas>
                     </div>
                 </div>
-                <div class="flex-grow w-full h-full relative min-w-0">
-                    <canvas id="elevationChart"></canvas>
-                </div>
             </div>
+        </div>
+
+        <!-- 底部主控列 -->
+        <section id="distance-panel" hidden aria-label="地點距離" class="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/60 bg-[#f0ece1]/95 px-4 py-2 shadow-lg">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0 text-sm" aria-live="polite">
+                    <p id="distance-place" class="break-words font-bold"></p>
+                    <p id="distance-value"></p>
+                </div>
+                <button type="button" onclick="targetMarker = null; renderPlaceDistance()" class="shrink-0 p-2 text-xs underline">關閉</button>
+            </div>
+        </section>
+        <div class="w-full max-w-sm bg-[#f0ece1]/90 backdrop-blur-xl rounded-full px-2 sm:px-5 py-2 flex justify-between items-center gap-1 pointer-events-auto border border-white/60 shadow-lg">
+            <button onclick="toggleChart()" class="p-2 rounded-full hover:bg-white text-[#6b725c] transition"><i data-lucide="activity" class="w-6 h-6"></i></button>
+            <button id="btn-locate" onclick="toggleGPS()" class="bg-[#e27653] text-white rounded-full px-3 sm:px-6 py-3 flex items-center justify-center gap-2 hover:bg-[#d1613e] active:scale-95 transition-all shadow-md">
+                <span id="btn-locate-text" class="font-bold text-sm tracking-wide">開始 Start</span>
+            </button>
+            <button type="button" onclick="document.getElementById('map-guide').showModal()" class="flex items-center gap-1 rounded-full px-1.5 py-2 text-xs font-bold whitespace-nowrap hover:bg-white" aria-haspopup="dialog">
+                <i data-lucide="info" aria-hidden="true" class="w-4 h-4"></i> 地圖怎麼用？
+            </button>
+            <button onclick="centerMapToUser()" class="p-2 rounded-full hover:bg-white text-[#6b725c] transition"><i data-lucide="navigation" class="w-6 h-6"></i></button>
         </div>
     </div>
 
@@ -301,16 +324,19 @@
         請點擊地圖任意處以新增點位
     </div>
 
-    <!-- 底部主控列 -->
-    <div class="map-actions ui-layer absolute left-0 right-0 flex justify-center pointer-events-none px-4">
-        <div class="bg-[#f0ece1]/90 backdrop-blur-xl rounded-full px-6 py-3 flex justify-between items-center gap-6 pointer-events-auto border border-white/60 shadow-lg">
-            <button onclick="toggleChart()" class="p-2 rounded-full hover:bg-white text-[#6b725c] transition"><i data-lucide="activity" class="w-6 h-6"></i></button>
-            <button id="btn-locate" onclick="toggleGPS()" class="bg-[#e27653] text-white rounded-full px-8 py-3 flex items-center justify-center gap-2 hover:bg-[#d1613e] active:scale-95 transition-all shadow-md">
-                <span id="btn-locate-text" class="font-bold text-sm tracking-wide">開始 Start</span>
-            </button>
-            <button onclick="centerMapToUser()" class="p-2 rounded-full hover:bg-white text-[#6b725c] transition"><i data-lucide="navigation" class="w-6 h-6"></i></button>
+    <dialog id="map-guide" aria-labelledby="map-guide-title">
+        <div class="p-5">
+            <form method="dialog" class="flex items-center justify-between gap-3">
+                <h2 id="map-guide-title" class="text-lg font-bold">地圖怎麼用？</h2>
+                <button type="submit" class="p-2 text-sm underline">關閉</button>
+            </form>
+            <ul class="mt-3 space-y-3 text-sm leading-relaxed">
+                <li><strong>選步道</strong> · 點上方「步道」，選想看的路線。</li>
+                <li><strong>豹狗是你的位置</strong> · 點下方「開始」並允許定位，就會在地圖上看到豹狗。</li>
+                <li><strong>雲寶是你正在看的位置</strong> · 滑過或觸碰海拔圖，雲寶會標出步道上的對應位置。</li>
+            </ul>
         </div>
-    </div>
+    </dialog>
 
     <!-- 專案管理 Modal -->
     <div id="project-modal" class="ui-layer fixed inset-0 bg-black/40 backdrop-blur-sm hidden flex-col justify-center items-center pointer-events-auto z-[2000]">
@@ -738,6 +764,8 @@
                 undoStack = []; 
             }
             currentProjectId = id;
+            targetMarker = null;
+            renderPlaceDistance();
             if (!isViewOnly) saveToLocal();
             const proj = projects[id];
             
@@ -868,13 +896,12 @@
             function showViewMode() {
                 const div = document.createElement('div');
                 div.className = 'p-1 min-w-[150px]';
-                let isTarget = targetMarker && targetMarker.id === mData.id;
                 
-                let html = `<b class="text-sm px-1 text-gray-800 block">${escapeHTML(mData.name)} ${isTarget ? '🎯' : ''}</b>`;
+                let html = `<b class="text-sm px-1 text-gray-800 block">${escapeHTML(mData.name)}</b>`;
                 if(mData.desc) html += `<p class="text-[11px] text-gray-600 px-1 mt-1 whitespace-pre-wrap">${escapeHTML(mData.desc)}</p>`;
                 
                 html += `<div class="flex gap-2 mt-2 pt-2 border-t border-gray-200 px-1">
-                    <button class="text-xs ${isTarget ? 'text-gray-400' : 'text-blue-600'} font-bold hover:underline btn-target">${isTarget ? '已鎖定' : '設為目標'}</button>`;
+                    <button type="button" class="rounded-lg bg-blue-50 px-2 py-1.5 text-xs font-bold text-blue-800 hover:bg-blue-100 btn-target">查看距離</button>`;
                 
                 if (!isViewOnly) {
                     html += `<button class="text-xs text-[#5c7042] font-bold hover:underline btn-edit">編輯</button>
@@ -884,11 +911,9 @@
                 div.innerHTML = html;
 
                 div.querySelector('.btn-target').onclick = () => {
-                    targetMarker = isTarget ? null : mData;
-                    popup.setDOMContent(showViewMode());
-                    if (isTracking && lastPosition) {
-                        updatePosition(lastPosition);
-                    }
+                    targetMarker = mData;
+                    renderPlaceDistance();
+                    popup.remove();
                 };
 
                 if (!isViewOnly) {
@@ -896,7 +921,10 @@
                     div.querySelector('.btn-delete').onclick = () => {
                         if (confirm(`確定要刪除地標「${mData.name}」嗎？`)) {
                             saveStateForUndo(); 
-                            if (targetMarker && targetMarker.id === mData.id) targetMarker = null;
+                            if (targetMarker?.id === mData.id) {
+                                targetMarker = null;
+                                renderPlaceDistance();
+                            }
                             marker.remove();
                             projects[currentProjectId].markers = projects[currentProjectId].markers.filter(m => m.id !== mData.id);
                             saveToLocal();
@@ -913,6 +941,10 @@
                         const index = projects[currentProjectId].markers.findIndex(m => m.id === mData.id);
                         if (index !== -1) {
                             projects[currentProjectId].markers[index] = updatedData;
+                            if (targetMarker?.id === mData.id) {
+                                targetMarker = updatedData;
+                                renderPlaceDistance();
+                            }
                             saveToLocal();
                             marker.remove();
                             renderMarker(updatedData);
@@ -933,6 +965,7 @@
                     const lngLat = marker.getLngLat();
                     mData.lat = lngLat.lat;
                     mData.lng = lngLat.lng;
+                    if (targetMarker?.id === mData.id) renderPlaceDistance();
                     const index = projects[currentProjectId].markers.findIndex(m => m.id === mData.id);
                     if (index !== -1) projects[currentProjectId].markers[index] = mData;
                     saveToLocal();
@@ -1521,6 +1554,26 @@
         const gpsStatus = document.getElementById('gps-status');
         let lastPosition = null;
 
+        function renderPlaceDistance() {
+            const panel = document.getElementById('distance-panel');
+            panel.hidden = !targetMarker;
+            if (!targetMarker) return;
+
+            const place = document.getElementById('distance-place');
+            const value = document.getElementById('distance-value');
+            let message = '開啟定位以查看距離';
+            if (isTracking && lastPosition) {
+                const { latitude, longitude } = lastPosition.coords;
+                const km = getDistance(latitude, longitude, targetMarker.lat, targetMarker.lng);
+                const distance = km < 1 ? Math.round(km * 1000) + ' 公尺' : km.toFixed(2) + ' 公里';
+                message = '直線距離 ' + distance;
+            } else if (isTracking) {
+                message = gpsStatus.textContent === '暫時無法定位' ? '暫時無法定位，正在重試' : '定位中，請稍候';
+            }
+            if (place.textContent !== targetMarker.name) place.textContent = targetMarker.name;
+            if (value.textContent !== message) value.textContent = message;
+        }
+
         function centerMapToUser() {
             if (userMarker) map.flyTo({ center: userMarker.getLngLat(), zoom: 16 });
             else alert('尚未取得定位資訊，請先點擊「開始」。');
@@ -1541,6 +1594,7 @@
                 gpsStatus.textContent = "定位中...";
                 btnLocateText.textContent = "停止 Stop";
                 watchId = navigator.geolocation.watchPosition(updatePosition, error => {
+                    lastPosition = null;
                     gpsStatus.textContent = error.code === 1 ? '未允許定位' : '暫時無法定位';
                     gpsStatus.classList.remove('text-[#e27653]');
                     if (error.code === 1) {
@@ -1549,9 +1603,11 @@
                         btnLocateText.textContent = '開始 Start';
                         alert('請在手機設定允許定位。若在 LINE 內仍無法定位，可從右上角選單改用瀏覽器開啟。');
                     }
+                    renderPlaceDistance();
                 }, { enableHighAccuracy: true, timeout: 15000 });
                 isTracking = true;
             }
+            renderPlaceDistance();
         }
 
         let lastGpsCalcTime = 0;
@@ -1562,11 +1618,7 @@
             const lat = position.coords.latitude; const lng = position.coords.longitude;
             let statusText = `精度: ${Math.round(position.coords.accuracy)}m`;
 
-            if (targetMarker) {
-                const d = getDistance(lat, lng, targetMarker.lat, targetMarker.lng);
-                const estimatedTimeStr = getEstimatedWalkingTimeStr(d, true); 
-                statusText += ` | 距${targetMarker.name.slice(0,4)}: ${d < 1 ? Math.round(d*1000)+'m' : d.toFixed(2)+'km'} (${estimatedTimeStr})`;
-            }
+            renderPlaceDistance();
 
             const currentProj = projects[currentProjectId];
             const now = Date.now();
