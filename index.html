@@ -88,26 +88,36 @@
 
         /* GPS 定位點 */
         .user-location-marker {
-            background-color: #e27653;
-            border: 3px solid white;
+            display: grid;
+            place-items: center;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
-            width: 16px;
-            height: 16px;
-            transition: all 0.3s ease;
+            background-color: rgba(59, 130, 246, 0.16);
+            border: 1px solid rgba(59, 130, 246, 0.55);
+            pointer-events: none;
+            z-index: 1;
         }
-        
-        .pulse::after {
+
+        .user-location-marker img {
+            width: 42px;
+            height: 42px;
+            object-fit: contain;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+        }
+
+        .user-location-marker::after {
             content: "";
-            border-radius: 50%;
-            height: 36px;
-            width: 36px;
             position: absolute;
-            margin: -10px 0 0 -10px;
-            animation: pulsate 1.5s ease-out;
-            animation-iteration-count: infinite;
+            inset: -3px;
+            border: 2px solid #60a5fa;
+            border-radius: 50%;
+            animation: pulsate 1.5s ease-out 1.1s infinite;
             opacity: 0;
-            border: 2px solid #e27653;
-            animation-delay: 1.1s;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .user-location-marker::after { animation: none; }
         }
 
         @keyframes pulsate {
@@ -1586,7 +1596,12 @@
             gpsStatus.classList.add('text-[#e27653]');
 
             if (!userMarker) {
-                const el = document.createElement('div'); el.className = 'user-location-marker pulse';
+                const el = document.createElement('div');
+                el.className = 'user-location-marker';
+                const mascot = document.createElement('img');
+                mascot.src = './baogou-location.png';
+                mascot.alt = '你目前的位置';
+                el.appendChild(mascot);
                 userMarker = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map);
                 map.flyTo({ center: [lng, lat], zoom: 16 });
             } else {
